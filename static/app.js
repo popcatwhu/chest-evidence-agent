@@ -622,6 +622,7 @@ async function loadEvaluation() {
       t = d.test,
       q = d.report_quality,
       c = d.development;
+    const developmentNote = c ? `${c.inputs}组已知开发输入来自${c.patients}位患者，具体候选诊断名称符合参考结局的为${c.specific_matches}位，疾病大类为${c.broad_matches}位。这些是开发验证，不能作为独立准确率。` : '当前多模型流程已完成真实模型联通检查，诊断得分以独立测试为准。仍需临床专家评估报告的解释、鉴别依据和检查建议。';
     $('evaluation-content').innerHTML = `<div class="eval-cards">
       <section class="panel eval-stat"><span>独立公开测试患者</span><h2>${d.test_patients} <small style="font-size:12px;font-weight:400">例</small></h2><p>按患者隔离，测试成绩不参与策略选择</p></section>
       <section class="panel eval-stat"><span>${d.current_team_evaluation === 'pending' ? '参考流程的选择题结论' : '报告中的选择题结论'}</span><h2>${Math.round(t.accuracy*100)}%</h2><p>${t.correct}/${t.tasks} 题，失败任务计入分母</p></section>
@@ -632,10 +633,11 @@ async function loadEvaluation() {
       <tr><td>保留可用临床证据对照</td><td>${q.usable_contrasts}/${t.tasks}</td></tr>
       <tr><td>仍需复核的报告</td><td>${q.needs_review_reports}/${t.tasks}</td></tr>
       <tr><td>保留原文线索</td><td>${q.literal_clues_retained} 条</td></tr>
+      ${d.collaboration ? `<tr><td>全部 Agent 完整参与</td><td>${d.collaboration.complete_teams}/${t.tasks}</td></tr>` : ''}
       </tbody></table></div><div class="eval-detail">待复核标记包含未完成的模型复核或证据对照、引用不匹配等问题，不能直接等同于临床错误数。</div>
       <div class="eval-footer"><span>快照导出：${esc(date(d.snapshot_exported_at))}</span><a href="/static/evaluation.json" download="agent-evaluation.json">下载评测汇总 ↓</a></div></section>
       <div class="eval-notes"><section class="panel eval-note"><h3>分数的含义</h3><p>${d.current_team_evaluation === 'pending' ? '下列分数来自此前单主模型流程，当前多模型协作尚未完成独立评测。' : '这些分数衡量公开问题在完整报告中的选项结论，不代表临床诊断准确率。'}公开数据预训练污染情况未知，尚未经临床专家评分；引用检查通过也不能证明医学正确。</p></section>
-      <section class="panel eval-note"><h3>开发验证与局限</h3><p>${c.inputs}组已知开发输入来自${c.patients}位患者，具体候选诊断名称符合参考结局的为${c.specific_matches}位，疾病大类为${c.broad_matches}位。这些是开发验证，不能作为独立准确率。结核仍误判，张力性气胸仍只识别到大类。</p></section></div>`;
+      <section class="panel eval-note"><h3>开发验证与局限</h3><p>${esc(developmentNote)}</p></section></div>`;
   } catch (e) {
     $('evaluation-content').innerHTML = `<div class="panel simple-empty">评测记录读取失败：${esc(e.message)}<br><button class="text-button" id="retry-evaluation">重新读取</button></div>`;
   }

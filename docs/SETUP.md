@@ -46,7 +46,7 @@ set +a
 bash scripts/start.sh
 ```
 
-API 模式需要 `CHEST_API_MODEL`、`OPENAI_BASE_URL` 和 `OPENAI_API_KEY`。没有本地专用观察权重时，设置 `CHEST_CXR_EXPERT=0`。真实凭据只保存在本地，`.env` 已加入 `.gitignore`。
+API 模式需要 `CHEST_API_MODEL`、`OPENAI_BASE_URL` 和 `OPENAI_API_KEY`。API 模式仅替换临床主模型；影像和审查 Agent 仍使用本地权重与 GPU。真实凭据只保存在本地，`.env` 已加入 `.gitignore`。
 
 ## 远程访问
 

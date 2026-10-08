@@ -39,7 +39,8 @@ def health():
         "backend": config.BACKEND,
         "model_name": config.MODEL.name,
         "model_ready": backend.ready() and not config.INFERENCE_PAUSED,
-        "cxr_reader": config.CXR_READER,
+        "cxr_reader": config.RADIOLOGY_MODEL.name,
+        "minimal_mcq_reader": config.CXR_READER,
         "clinical_contrast": True,
         "agent_team": agents.roster(),
         "team_models_ready": all(

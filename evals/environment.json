@@ -30,5 +30,52 @@
   "active_model_revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
   "quantization": "Locally saved NF4 double quantization, BF16 compute; visual and lm_head unquantized",
   "clinical_contrast": true,
-  "diagnostic_workflow_record": "evals/summary.json"
+  "diagnostic_workflow_record": "evals/summary.json",
+  "agent_protocol": "heterogeneous-review-v1",
+  "agent_models": [
+    {
+      "agent": "radiology",
+      "model": "NV-Reason-CXR-3B",
+      "backend": "local",
+      "quantization": "BF16",
+      "source_revision": {
+        "repository": "nvidia/NV-Reason-CXR-3B",
+        "revision": "056bd0383b35226554da9dc5866e095df174ae19"
+      }
+    },
+    {
+      "agent": "clinical",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    },
+    {
+      "agent": "review",
+      "model": "Qwen3-VL-8B-Instruct",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "Qwen/Qwen3-VL-8B-Instruct",
+        "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+        "weights_verified": "LFS SHA256"
+      }
+    },
+    {
+      "agent": "coordinator",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    }
+  ],
+  "auxiliary_residency": "Only one auxiliary model at a time; primary model remains resident"
 }

@@ -1,26 +1,39 @@
-# Agent 评测
+# 多模型评测
 
-诊断流程固定包含临床证据对照：整理病例、观察胸片、规划工具、检索医学资料、比较候选病因、生成报告、复核及必要时修订。临床证据对照没有关闭开关；步骤失败时记录未完成状态，并将报告标记为待复核。
+## 协作流程
 
-## 当前记录
+NV-Reason 影像 Agent 独立描述原图；Lingshu 临床 Agent 结合病史、工具和医学资料形成报告；Qwen 独立审查报告与原始证据。有效质疑触发一次 Lingshu 协调修订，然后再次交给 Qwen。辅助 Agent 未完成或质疑无法匹配原文时，保留备注并标记待复核。
 
-20位独立公开测试患者的完整报告均生成成功，报告中的选择题结论答对15例，耗时中位数58.25秒。患者与开发集合及此前使用的患者集合不重叠，测试结果未用于策略选择。详细指标与输入清单指纹见`evals/summary.json`。
+## 测试集合
 
-这些是公开数据上的选择题结论得分，尚未经临床专家评分，不能表述为临床诊断准确率。6位开发患者的名称匹配仅用于开发检查。保留待复核标记、失败任务与不确定性，不把引用有效等同于医学正确。
+按患者隔离抽取20位公开患者，每位使用一张胸片和一道诊断选择题。排除108位此前使用过的患者，模型和流程在读取测试成绩前固定。抽样种子、病例编号和元数据指纹见 [evals/sample.json](../evals/sample.json)。
 
-## 运行
+模型输入只包含病史、匹配的胸片和公开问题。参考答案、图注、最终诊断和解释仅保存在评测器侧。失败任务仍计入分母，不重新提交已经失败的病例来替换结果。
 
-先准备上游公开数据及模型，再冻结测试集合：
+这是小样本公开题目测试，预训练污染情况未知，尚未经临床专家评分。选择题结论得分、报告完成率和全部 Agent 完整参与率分别统计；引用检查通过不表示医学判断正确。
+
+## 复现
+
+先按照安装说明获取模型、MedRAX 元数据和 ChestAgentBench 数据：
 
 ```bash
 python scripts/prepare_benchmark.py --limit 5
-python scripts/prepare_independent_benchmark.py
-python scripts/evaluate_http.py --modes verified --output data/independent/results.json
-python scripts/audit_full_report_results.py --manifest data/independent/manifest.json --results data/independent/results.json --output data/independent/audit.json
+python scripts/prepare_independent_benchmark.py --limit 20 --seed 20261008 --exclude-manifest evals/sample.json --output-dir data/team/test20
+python scripts/evaluate_full_reports.py --manifest data/team/test20/manifest.json --modes verified --output data/team/test20_results.json
+python scripts/summarize_team_evaluation.py --manifest data/team/test20/manifest.json --results data/team/test20_results.json
+python scripts/export_frontend_evaluation.py
 ```
 
-使用独立结果文件，不覆盖已经冻结的记录。审计核对输入指纹、病史、问题、原始图片像素、任务完整性和选项评分；参考答案不进入模型请求。失败任务保留在分母中。
+汇总脚本检查任务完整性、输入指纹、病史、问题、原图像素、选项评分及实际模型身份。报告中的 `collaboration` 保存意见、质疑和协调记录。汇总输出位于 [evals/summary.json](../evals/summary.json)。
 
-`direct` 和 `tools` 是显式的消融实验模式，分别用于研究模型直接推理和跳过复核的工具推理，工作台只提供 `verified` 完整流程。它们不是可切换的 Agent 版本，其结果不得混入当前完整流程成绩。
+## 延迟
 
-发布到评测页面的汇总由 `scripts/export_frontend_evaluation.py` 从`evals/summary.json`导出。页面不读取本地患者数据库或模型权重。
+主模型常驻 GPU，影像模型与审查模型分阶段加载。完整任务耗时包含辅助模型切换、工具、检索、复核和修订，不能与单次模型生成速度混用。GPU 峰值按任务记录。
+
+`direct` 和 `tools` 仅供消融实验，工作台使用 `verified` 完整流程。不同任务、样本和输入协议的分数不合并。
+
+## 本轮结果
+
+20例报告均完成，选择题结论答对15例。所有专业 Agent 完整参与的为19例；1例影像 Agent 的结构化输出未完成，保留为失败观察，没有重新提交病例替换结果。报告耗时中位数63.94秒，GPU峰值保留显存28.14 GiB。
+
+16份报告仍需复核；这些标记包括临床对照不足、无法锚定的模型质疑和辅助 Agent 未完成等情况。它们不等同于16例临床诊断错误。具体医疗解释与检查建议尚未进行专家评分。

@@ -117,8 +117,15 @@ def main():
             checks.append("Connection dialog and LAN clipboard fallback")
 
             page.locator('[data-view="evaluation"]').click()
-            expect(page.locator(".eval-table tbody tr")).to_have_count(5)
-            expect(page.locator(".eval-stat").nth(1)).to_contain_text("75%")
+            snapshot = requests.get(
+                args.url + "/static/evaluation.json", timeout=30
+            ).json()
+            expect(page.locator(".eval-table tbody tr")).to_have_count(
+                6 if snapshot.get("collaboration") else 5
+            )
+            expect(page.locator(".eval-stat").nth(1)).to_contain_text(
+                f"{round(snapshot['test']['accuracy'] * 100)}%"
+            )
             page.screenshot(path=str(output / "evaluation.png"), full_page=True)
             checks.append("Real frozen evaluation snapshot")
 

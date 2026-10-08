@@ -654,7 +654,7 @@ def execute(run_id):
                 if state.get("clinical_contrast")
                 else None,
                 "clinical_contrast_enabled": run["mode"] == "verified",
-                "cxr_reader": config.CXR_READER,
+                "cxr_reader": config.RADIOLOGY_MODEL.name,
                 "constrained_json_enabled": config.CONSTRAINED_JSON
                 and config.BACKEND == "local",
                 "reasoning_reads_original_image": bool(reasoning_image(state)),

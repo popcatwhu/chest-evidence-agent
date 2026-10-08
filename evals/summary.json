@@ -1,7 +1,59 @@
 {
-  "model": "Lingshu-32B-NF4",
+  "protocol": "heterogeneous-review-v1",
+  "current_team_evaluation": "complete",
+  "model": "NV-Reason-CXR-3B / Lingshu-32B-NF4 / Qwen3-VL-8B-Instruct",
+  "models_by_agent": {
+    "radiology": "NV-Reason-CXR-3B",
+    "clinical": "Lingshu-32B-NF4",
+    "review": "Qwen3-VL-8B-Instruct",
+    "coordinator": "Lingshu-32B-NF4"
+  },
+  "agent_models": [
+    {
+      "agent": "radiology",
+      "model": "NV-Reason-CXR-3B",
+      "backend": "local",
+      "quantization": "BF16",
+      "source_revision": {
+        "repository": "nvidia/NV-Reason-CXR-3B",
+        "revision": "056bd0383b35226554da9dc5866e095df174ae19"
+      }
+    },
+    {
+      "agent": "clinical",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    },
+    {
+      "agent": "review",
+      "model": "Qwen3-VL-8B-Instruct",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "Qwen/Qwen3-VL-8B-Instruct",
+        "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+        "weights_verified": "LFS SHA256"
+      }
+    },
+    {
+      "agent": "coordinator",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    }
+  ],
   "mode": "verified",
-  "clinical_evidence_comparison": true,
   "test_patients": 20,
   "test": {
     "tasks": 20,
@@ -19,113 +71,46 @@
     "completed": 20,
     "failed_or_interrupted": 0,
     "terminal_errors": [],
-    "deterministic_report_issues": 2,
-    "needs_review_reports": 18,
-    "median_report_seconds": 58.25,
-    "gpu_peak_reserved_gib": 21.62,
-    "usable_contrasts": 12,
-    "literal_clues_retained": 13,
+    "deterministic_report_issues": 1,
+    "needs_review_reports": 16,
+    "median_report_seconds": 63.94,
+    "gpu_peak_reserved_gib": 28.14,
+    "usable_contrasts": 6,
+    "literal_clues_retained": 9,
     "quoted_observation_conflicts": 0
   },
-  "development": {
-    "complete": true,
-    "inputs": 7,
-    "patients": 6,
-    "specific_matches": 4,
-    "broad_matches": 5,
-    "unresolved_issues": 13,
-    "median_warm_seconds": 66.6,
-    "missing_required_reader": 0,
-    "records": [
-      {
-        "patient_id": "6399",
-        "title": "公开病例 6399 · 病史与胸片",
-        "candidate": "肺孢子菌肺炎",
-        "specific_match": true,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "d80b143a8db34312b60c68a66e10aa31",
-        "review_issues": 2
+  "collaboration": {
+    "complete_teams": 19,
+    "agents": {
+      "radiology": {
+        "completed": 19,
+        "failed": 1
       },
-      {
-        "patient_id": "10698",
-        "title": "公开病例 10698 · 病史与胸片",
-        "candidate": "胸膜孤立性纤维瘤",
-        "specific_match": true,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "e4ff17621a65454ba6cc75e18d4d0660",
-        "review_issues": 2
+      "clinical": {
+        "completed": 20,
+        "failed": 0
       },
-      {
-        "patient_id": "11583",
-        "title": "公开病例 11583 · 病史与胸片",
-        "candidate": "脓毒性肺栓塞",
-        "specific_match": true,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "2c5105ca739544b49bbf5aaea97d42eb",
-        "review_issues": 0
+      "review": {
+        "completed": 20,
+        "failed": 0
       },
-      {
-        "patient_id": "6399",
-        "title": "公开病例 6399 · 病史与胸片 · CD4补充",
-        "candidate": "肺孢子菌肺炎",
-        "specific_match": true,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "81ddf25b1e0a4364b5e910b4f913c443",
-        "review_issues": 0
-      },
-      {
-        "patient_id": "10304",
-        "title": "新增病例 10304",
-        "candidate": "肺癌",
-        "specific_match": false,
-        "broad_match": false,
-        "status": "completed",
-        "run_id": "c77223bc91234fa188cc79f14be3b924",
-        "review_issues": 4
-      },
-      {
-        "patient_id": "1373",
-        "title": "新增病例 1373",
-        "candidate": "气胸",
-        "specific_match": false,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "80d5a4ea014e40fe8106eb92df2484e8",
-        "review_issues": 4
-      },
-      {
-        "patient_id": "14432",
-        "title": "新增病例 14432",
-        "candidate": "Catamenial pneumothorax",
-        "specific_match": true,
-        "broad_match": true,
-        "status": "completed",
-        "run_id": "43623570184f47ef9fcc363c08a466c6",
-        "review_issues": 1
+      "coordinator": {
+        "completed": 20,
+        "failed": 0
       }
-    ]
+    }
   },
-  "test_manifest_sha256": "6f8df876a0f1c5cd46616ec80d5f84cf81e425babca668b3ec1ce65b45ca8f4b",
+  "development": null,
+  "test_manifest_sha256": "fb19055a8a2958e922afdac52e46d4f163734ae0e31631e7d84e24451beb612d",
+  "pipeline_sha256": "bef4b6250fa24383c93c4e08b098c1813f574078d32570672a9b43d747189e70",
   "test_outcomes_used_for_selection": false,
   "clinical_accuracy_validated": false,
-  "audit": {
-    "complete_tasks_and_grading_checked": true,
-    "patient_disjoint_from_previous_experiments": true,
-    "clinical_expert_scoring_performed": false
-  },
   "limitations": [
-    "Exact choice scoring evaluates diagnostic MCQ conclusions within full reports, not clinical expert correctness.",
-    "Public pretraining contamination unknown; known6 open-case name matches are development evidence.",
-    "Source and citation checks prove provenance, not truth of the diagnosis or image interpretation.",
-    "needs_review counts include unfinished or ungrounded model review; distinguish them from deterministic report errors.",
-    "Full reports answer published MCQs with additional original patient history; do not pool with earlier minimal MCQ scores."
+    "Twenty public diagnostic MCQs within full reports; not clinical expert grading.",
+    "Public pretraining contamination unknown.",
+    "Independent model review and citation validity do not prove medical correctness.",
+    "Serial auxiliary model loading is included in report latency."
   ],
-  "engine_tests_passed": 69,
-  "engine_json_generation_attempts": "Pre-existing maximum2 attempts per structured backend call, raw outputs retained. Evaluators never resubmit a failed terminal case.",
-  "protocol": "single-model-reference",
-  "current_team_evaluation": "pending"
+  "evaluated_commit": "cfa869703674aab7e0316eece79bf5d98bdab1e5",
+  "engine_tests_passed": 77
 }
