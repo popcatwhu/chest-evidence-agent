@@ -30,5 +30,5 @@
   "active_model_revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
   "quantization": "Locally saved NF4 double quantization, BF16 compute; visual and lm_head unquantized",
   "clinical_contrast": true,
-  "diagnostic_workflow_record": "full_report_quality_validation.json"
+  "diagnostic_workflow_record": "evals/summary.json"
 }

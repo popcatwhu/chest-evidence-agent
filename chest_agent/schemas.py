@@ -23,7 +23,7 @@ class Plan(StrictModel):
     tools: list[Literal["classify", "segment"]] = Field(default_factory=list)
     query: str = Field(min_length=1)
     reason: str = Field(min_length=1)
-    hypotheses: list[str] = Field(default_factory=list,max_length=4)
+    hypotheses: list[str] = Field(default_factory=list, max_length=4)
 
 
 class Fact(StrictModel):
@@ -59,7 +59,7 @@ class RecommendedCheck(StrictModel):
     evidence_ids: list[str] = Field(min_length=1)
 
 
-ChoiceLetter = Literal['A','B','C','D','E','F']
+ChoiceLetter = Literal["A", "B", "C", "D", "E", "F"]
 
 
 class Report(StrictModel):
@@ -71,7 +71,9 @@ class Report(StrictModel):
     findings: list[Claim] = Field(default_factory=list)
     missing_information: list[str] = Field(default_factory=list)
     next_checks: list[str] = Field(default_factory=list)
-    recommended_checks: list[RecommendedCheck] = Field(default_factory=list,max_length=8)
+    recommended_checks: list[RecommendedCheck] = Field(
+        default_factory=list, max_length=8
+    )
     change_summary: str = "首次分析"
 
 
@@ -80,8 +82,8 @@ class ChoiceReport(Report):
 
 
 def report_schema(question: str):
-    letters=set(re.findall(r'(?m)^\s*([A-F])[).、]\s*',question))
-    return ChoiceReport if {'A','B'} <= letters else Report
+    letters = set(re.findall(r"(?m)^\s*([A-F])[).、]\s*", question))
+    return ChoiceReport if {"A", "B"} <= letters else Report
 
 
 class ReviewIssue(StrictModel):
@@ -101,28 +103,34 @@ class Change(StrictModel):
     evidence_ids: list[str] = Field(min_length=1)
 
 
-def validate_evidence(report: Report, evidence: list[Evidence],allow_original=True) -> list[str]:
+def validate_evidence(
+    report: Report, evidence: list[Evidence], allow_original=True
+) -> list[str]:
     """Verify citation integrity and patient evidence; this is not clinical validation."""
     available = {e.id: e for e in evidence if e.status == "completed"}
     issues = []
-    if re.search(r'肺野密度|纹理增|浸润影|弥漫性阴影',report.most_likely.name):
-        issues.append('主结论仍是影像表现，没有形成明确的疾病候选，需要进一步评估')
+    if re.search(r"肺野密度|纹理增|浸润影|弥漫性阴影", report.most_likely.name):
+        issues.append("主结论仍是影像表现，没有形成明确的疾病候选，需要进一步评估")
     candidates = [report.most_likely, *report.differentials]
     claims = [*report.findings]
     for candidate in candidates:
         claims.extend(candidate.support + candidate.against)
         if not any(
             available.get(ref) and available[ref].kind in {"case", "image"}
-            for claim in candidate.support for ref in claim.evidence_ids
+            for claim in candidate.support
+            for ref in claim.evidence_ids
         ):
             issues.append(f"候选诊断 {candidate.name} 缺少患者自身证据")
     for claim in claims:
-        if (claim.evidence_ids == ["I-classify"] and
-                re.search(r"未见|未发现|排除|不存在|没有|正常",claim.text)):
+        if claim.evidence_ids == ["I-classify"] and re.search(
+            r"未见|未发现|排除|不存在|没有|正常", claim.text
+        ):
             issues.append("分类分数不能直接证明影像正常或排除疾病：" + claim.text)
         for ref in claim.evidence_ids:
-            if ref=='I-original' and not allow_original:
-                issues.append('本轮诊断推理未直接读取原图，应引用实际接收的工具影像观察，不能引用I-original假装直接核验')
+            if ref == "I-original" and not allow_original:
+                issues.append(
+                    "本轮诊断推理未直接读取原图，应引用实际接收的工具影像观察，不能引用I-original假装直接核验"
+                )
             if ref not in available:
                 issues.append(f"结论引用不存在或失败的证据：{ref}")
     return list(dict.fromkeys(issues))

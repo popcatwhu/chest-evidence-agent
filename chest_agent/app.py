@@ -22,7 +22,9 @@ async def lifespan(app):
 
 
 app = FastAPI(title="Chest Evidence Agent", lifespan=lifespan)
-app.mount("/artifacts", StaticFiles(directory=config.DATA / "artifacts"), name="artifacts")
+app.mount(
+    "/artifacts", StaticFiles(directory=config.DATA / "artifacts"), name="artifacts"
+)
 app.mount("/static", StaticFiles(directory=config.ROOT / "static"), name="static")
 
 
@@ -33,12 +35,20 @@ def index():
 
 @app.get("/api/health")
 def health():
-    return {"backend":config.BACKEND, 'model_name':config.MODEL.name,"model_ready":backend.ready() and not config.INFERENCE_PAUSED,
-            'cxr_reader':config.CXR_READER,'clinical_contrast':True,
-            'inference_paused':config.INFERENCE_PAUSED,'load_nf4':config.LOAD_NF4,
-            'recheck_original_image':config.RECHECK_IMAGE,'constrained_json':config.CONSTRAINED_JSON and config.BACKEND=='local',
-            'max_input_tokens':config.MAX_INPUT_TOKENS,
-            "model_loaded":backend.model is not None, "knowledge_documents":len(list((config.DATA / "knowledge").glob("*.json")))}
+    return {
+        "backend": config.BACKEND,
+        "model_name": config.MODEL.name,
+        "model_ready": backend.ready() and not config.INFERENCE_PAUSED,
+        "cxr_reader": config.CXR_READER,
+        "clinical_contrast": True,
+        "inference_paused": config.INFERENCE_PAUSED,
+        "load_nf4": config.LOAD_NF4,
+        "recheck_original_image": config.RECHECK_IMAGE,
+        "constrained_json": config.CONSTRAINED_JSON and config.BACKEND == "local",
+        "max_input_tokens": config.MAX_INPUT_TOKENS,
+        "model_loaded": backend.model is not None,
+        "knowledge_documents": len(list((config.DATA / "knowledge").glob("*.json"))),
+    }
 
 
 @app.get("/api/cases")
@@ -47,7 +57,11 @@ def cases():
 
 
 @app.post("/api/cases")
-async def new_case(title: str = Form(...), context: str = Form(...), image: UploadFile | None = File(None)):
+async def new_case(
+    title: str = Form(...),
+    context: str = Form(...),
+    image: UploadFile | None = File(None),
+):
     if not context.strip():
         raise HTTPException(422, "请填写病例资料")
     image_path = None
@@ -82,7 +96,9 @@ def supplement(case_id: str, body: Supplement):
 
 
 class RunInput(BaseModel):
-    question: str = "最可能的诊断是什么？列出鉴别诊断、支持和反对证据，以及需要补充的检查。"
+    question: str = (
+        "最可能的诊断是什么？列出鉴别诊断、支持和反对证据，以及需要补充的检查。"
+    )
     mode: str = "verified"
 
 
@@ -93,12 +109,14 @@ def run_case(case_id: str, body: RunInput):
     if body.mode not in {"direct", "tools", "verified"}:
         raise HTTPException(422, "未知分析模式")
     if config.INFERENCE_PAUSED:
-        raise HTTPException(503,"正在进行模型对照评测，病例推理暂时暂停；历史报告仍可查看")
+        raise HTTPException(
+            503, "正在进行模型对照评测，病例推理暂时暂停；历史报告仍可查看"
+        )
     if not backend.ready():
         raise HTTPException(503, "模型尚未准备好，请等待权重下载完成或配置模型后端")
     run_id = store.create_run(case_id, body.question, body.mode)
     executor.submit(execute, run_id)
-    return {"run_id":run_id}
+    return {"run_id": run_id}
 
 
 @app.get("/api/cases/{case_id}/runs")
@@ -106,8 +124,13 @@ def case_runs(case_id: str):
     if not store.get_case(case_id):
         raise HTTPException(404, "病例不存在")
     with store.connect() as db:
-        return [dict(row) for row in db.execute(
-            "SELECT id,status,created,mode FROM runs WHERE case_id=? ORDER BY created DESC", (case_id,))]
+        return [
+            dict(row)
+            for row in db.execute(
+                "SELECT id,status,created,mode FROM runs WHERE case_id=? ORDER BY created DESC",
+                (case_id,),
+            )
+        ]
 
 
 @app.get("/api/runs/{run_id}")
@@ -121,7 +144,11 @@ def get_run(run_id: str):
 @app.get("/api/runs/{run_id}/download")
 def download(run_id: str):
     from fastapi.responses import JSONResponse
+
     run = store.get_run(run_id)
     if not run:
         raise HTTPException(404, "任务不存在")
-    return JSONResponse(run, headers={"Content-Disposition":f'attachment; filename="report-{run_id}.json"'})
+    return JSONResponse(
+        run,
+        headers={"Content-Disposition": f'attachment; filename="report-{run_id}.json"'},
+    )

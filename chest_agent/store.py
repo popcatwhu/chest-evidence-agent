@@ -39,7 +39,10 @@ def now():
 def create_case(title, context, image_path=None):
     case_id = uuid4().hex
     with connect() as db:
-        db.execute("INSERT INTO cases VALUES (?,?,?,?,?)", (case_id, title, context, image_path, now()))
+        db.execute(
+            "INSERT INTO cases VALUES (?,?,?,?,?)",
+            (case_id, title, context, image_path, now()),
+        )
     return get_case(case_id)
 
 
@@ -51,32 +54,59 @@ def get_case(case_id):
 
 def append_context(case_id, text):
     with connect() as db:
-        db.execute("UPDATE cases SET context=context || ? WHERE id=?", ("\n补充资料：" + text, case_id))
+        db.execute(
+            "UPDATE cases SET context=context || ? WHERE id=?",
+            ("\n补充资料：" + text, case_id),
+        )
 
 
 def list_cases():
     with connect() as db:
-        return [dict(r) for r in db.execute("SELECT * FROM cases ORDER BY created DESC")]
+        return [
+            dict(r) for r in db.execute("SELECT * FROM cases ORDER BY created DESC")
+        ]
 
 
 def create_run(case_id, question, mode):
     case = get_case(case_id)
     run_id = uuid4().hex
     with connect() as db:
-        db.execute("INSERT INTO runs VALUES (?,?,?,?,?,?,?,?,?)",
-                   (run_id, case_id, case["context"], question, mode, "queued", now(), None, None))
+        db.execute(
+            "INSERT INTO runs VALUES (?,?,?,?,?,?,?,?,?)",
+            (
+                run_id,
+                case_id,
+                case["context"],
+                question,
+                mode,
+                "queued",
+                now(),
+                None,
+                None,
+            ),
+        )
     return run_id
 
 
 def update_run(run_id, status, result=None, error=None):
     with connect() as db:
-        db.execute("UPDATE runs SET status=?,result=?,error=? WHERE id=?",
-                   (status, json.dumps(result, ensure_ascii=False) if result is not None else None, error, run_id))
+        db.execute(
+            "UPDATE runs SET status=?,result=?,error=? WHERE id=?",
+            (
+                status,
+                json.dumps(result, ensure_ascii=False) if result is not None else None,
+                error,
+                run_id,
+            ),
+        )
 
 
 def event(run_id, stage, message):
     with connect() as db:
-        db.execute("INSERT INTO events(run_id,stage,message,created) VALUES(?,?,?,?)", (run_id, stage, message, now()))
+        db.execute(
+            "INSERT INTO events(run_id,stage,message,created) VALUES(?,?,?,?)",
+            (run_id, stage, message, now()),
+        )
 
 
 def get_run(run_id):
@@ -86,24 +116,35 @@ def get_run(run_id):
             return None
         result = dict(row)
         result["result"] = json.loads(result["result"]) if result["result"] else None
-        result["events"] = [dict(e) for e in db.execute("SELECT * FROM events WHERE run_id=? ORDER BY seq", (run_id,))]
+        result["events"] = [
+            dict(e)
+            for e in db.execute(
+                "SELECT * FROM events WHERE run_id=? ORDER BY seq", (run_id,)
+            )
+        ]
         return result
 
 
 def previous_report(case_id, current_run):
     with connect() as db:
-        row = db.execute("SELECT result FROM runs WHERE case_id=? AND id!=? AND status='completed' ORDER BY created DESC LIMIT 1",
-                         (case_id, current_run)).fetchone()
+        row = db.execute(
+            "SELECT result FROM runs WHERE case_id=? AND id!=? AND status='completed' ORDER BY created DESC LIMIT 1",
+            (case_id, current_run),
+        ).fetchone()
     return json.loads(row["result"])["report"] if row and row["result"] else None
 
 
 def recover_interrupted():
     with connect() as db:
-        db.execute("UPDATE runs SET status='interrupted',error='服务重启，任务中断；请重新分析' WHERE status IN ('queued','running')")
+        db.execute(
+            "UPDATE runs SET status='interrupted',error='服务重启，任务中断；请重新分析' WHERE status IN ('queued','running')"
+        )
 
 
-def previous_context(case_id,current_run):
+def previous_context(case_id, current_run):
     with connect() as db:
-        row=db.execute("SELECT context FROM runs WHERE case_id=? AND id!=? AND status='completed' ORDER BY created DESC LIMIT 1",
-            (case_id,current_run)).fetchone()
-    return row['context'] if row else None
+        row = db.execute(
+            "SELECT context FROM runs WHERE case_id=? AND id!=? AND status='completed' ORDER BY created DESC LIMIT 1",
+            (case_id, current_run),
+        ).fetchone()
+    return row["context"] if row else None
