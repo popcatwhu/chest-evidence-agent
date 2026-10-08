@@ -54,63 +54,67 @@
     }
   ],
   "mode": "verified",
-  "test_patients": 20,
+  "test_patients": 60,
   "test": {
-    "tasks": 20,
-    "completed": 20,
-    "correct": 15,
-    "accuracy": 0.75,
+    "tasks": 60,
+    "completed": 59,
+    "correct": 44,
+    "accuracy": 0.7333333333333333,
     "wilson_95_ci": [
-      0.5313,
-      0.8881
+      0.6099,
+      0.8287
     ],
-    "invalid_or_missing_choices": 0
+    "invalid_or_missing_choices": 1
   },
   "report_quality": {
-    "tasks": 20,
-    "completed": 20,
-    "failed_or_interrupted": 0,
-    "terminal_errors": [],
-    "deterministic_report_issues": 1,
-    "needs_review_reports": 16,
-    "median_report_seconds": 63.94,
-    "gpu_peak_reserved_gib": 28.14,
-    "usable_contrasts": 6,
-    "literal_clues_retained": 9,
+    "tasks": 60,
+    "completed": 59,
+    "failed_or_interrupted": 1,
+    "terminal_errors": [
+      {
+        "case_id": "14547",
+        "error": "模型输出被截断；不能把内层候选对象当成完整报告"
+      }
+    ],
+    "deterministic_report_issues": 6,
+    "needs_review_reports": 51,
+    "median_report_seconds": 71.74,
+    "gpu_peak_reserved_gib": 28.92,
+    "usable_contrasts": 27,
+    "literal_clues_retained": 48,
     "quoted_observation_conflicts": 0
   },
   "collaboration": {
-    "complete_teams": 19,
+    "complete_teams": 58,
     "agents": {
       "radiology": {
-        "completed": 19,
+        "completed": 58,
         "failed": 1
       },
       "clinical": {
-        "completed": 20,
+        "completed": 59,
         "failed": 0
       },
       "review": {
-        "completed": 20,
+        "completed": 59,
         "failed": 0
       },
       "coordinator": {
-        "completed": 20,
+        "completed": 59,
         "failed": 0
       }
     }
   },
   "development": null,
-  "test_manifest_sha256": "fb19055a8a2958e922afdac52e46d4f163734ae0e31631e7d84e24451beb612d",
-  "pipeline_sha256": "bef4b6250fa24383c93c4e08b098c1813f574078d32570672a9b43d747189e70",
+  "test_manifest_sha256": "8535ca43b3458774408fe31c9b52cdb65e9471ff42e8fb3f392704c74e65fc52",
+  "pipeline_sha256": "b59478fb975059e01a133c833394b9f9611574138e4c3a901f140f6d32f39dd5",
   "test_outcomes_used_for_selection": false,
   "clinical_accuracy_validated": false,
   "limitations": [
-    "Twenty public diagnostic MCQs within full reports; not clinical expert grading.",
+    "60 public diagnostic MCQs within full reports; not clinical expert grading.",
     "Public pretraining contamination unknown.",
     "Independent model review and citation validity do not prove medical correctness.",
     "Serial auxiliary model loading is included in report latency."
   ],
-  "evaluated_commit": "cfa869703674aab7e0316eece79bf5d98bdab1e5",
-  "engine_tests_passed": 77
+  "evaluated_commit": "81e67666ffd0da6ce11bed9cdc9d756dd4cb072a"
 }
