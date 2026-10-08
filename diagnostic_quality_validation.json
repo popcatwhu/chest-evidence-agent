@@ -1,0 +1,332 @@
+{
+  "task": "diagnostic_quality_v3",
+  "clinical_accuracy_validated": false,
+  "baseline_development": {
+    "complete": true,
+    "inputs": 7,
+    "patients": 6,
+    "specific_matches": 2,
+    "broad_matches": 3,
+    "unresolved_issues": 2,
+    "median_warm_seconds": 37.445,
+    "missing_required_reader": 0,
+    "records": [
+      {
+        "patient_id": "6399",
+        "title": "公开病例 6399 · 病史与胸片",
+        "candidate": "肺孢子菌肺炎",
+        "specific_match": true,
+        "broad_match": true,
+        "status": "completed",
+        "run_id": "771e71841dd045a68aff848c9aea8df9",
+        "review_issues": 0
+      },
+      {
+        "patient_id": "10698",
+        "title": "公开病例 10698 · 病史与胸片",
+        "candidate": "大量左侧胸腔积液",
+        "specific_match": false,
+        "broad_match": false,
+        "status": "completed",
+        "run_id": "bef67e6e4c9840ec922be2fbc2b1f2c1",
+        "review_issues": 0
+      },
+      {
+        "patient_id": "11583",
+        "title": "公开病例 11583 · 病史与胸片",
+        "candidate": "脓毒性肺栓塞",
+        "specific_match": true,
+        "broad_match": true,
+        "status": "completed",
+        "run_id": "c797512aa78c4793ab7c32d0b44db3b5",
+        "review_issues": 0
+      },
+      {
+        "patient_id": "6399",
+        "title": "公开病例 6399 · 病史与胸片 · CD4补充",
+        "candidate": "肺孢子菌肺炎",
+        "specific_match": true,
+        "broad_match": true,
+        "status": "completed",
+        "run_id": "c60dc48e027f4242acf69a1f08306b1d",
+        "review_issues": 0
+      },
+      {
+        "patient_id": "10304",
+        "title": "新增病例 10304",
+        "candidate": "肺癌",
+        "specific_match": false,
+        "broad_match": false,
+        "status": "completed",
+        "run_id": "28053e129a474bdc867194e19794d8ac",
+        "review_issues": 0
+      },
+      {
+        "patient_id": "1373",
+        "title": "新增病例 1373",
+        "candidate": "肺部感染（如肺炎）",
+        "specific_match": false,
+        "broad_match": false,
+        "status": "completed",
+        "run_id": "1cec9b0dfca049288502efb8cfbc6ec2",
+        "review_issues": 1
+      },
+      {
+        "patient_id": "14432",
+        "title": "新增病例 14432",
+        "candidate": "自发性气胸",
+        "specific_match": false,
+        "broad_match": true,
+        "status": "completed",
+        "run_id": "bb209e88a1e44e30993e3b3d55c79a45",
+        "review_issues": 1
+      }
+    ]
+  },
+  "development": {
+    "legacy": {
+      "complete": true,
+      "inputs": 7,
+      "patients": 6,
+      "specific_matches": 3,
+      "broad_matches": 5,
+      "unresolved_issues": 2,
+      "median_warm_seconds": 44.04,
+      "missing_required_reader": 0,
+      "records": [
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "55c6a5ed30424e439d464c6290051b9a",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10698",
+          "title": "公开病例 10698 · 病史与胸片",
+          "candidate": "胸膜孤立性纤维瘤",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "60cdfc58b91342b3a1471c2cf097ff5c",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "11583",
+          "title": "公开病例 11583 · 病史与胸片",
+          "candidate": "脓毒性肺栓塞",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "8f9fdc7ed92945d19e151534dc25632f",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片 · CD4补充",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "e8ce191dbc05454e86394e3212da8e86",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10304",
+          "title": "新增病例 10304",
+          "candidate": "肺癌",
+          "specific_match": false,
+          "broad_match": false,
+          "status": "completed",
+          "run_id": "1711e1a2c52c4262bd2e6942a2a3176a",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "1373",
+          "title": "新增病例 1373",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "d2f4ceb94637425483e91af4e60a474e",
+          "review_issues": 1
+        },
+        {
+          "patient_id": "14432",
+          "title": "新增病例 14432",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "bbe7ef2c90d1412bb5b507da7a5cd9fd",
+          "review_issues": 1
+        }
+      ]
+    },
+    "nvreason": {
+      "complete": true,
+      "inputs": 7,
+      "patients": 6,
+      "specific_matches": 3,
+      "broad_matches": 5,
+      "unresolved_issues": 4,
+      "median_warm_seconds": 58.68000000000001,
+      "missing_required_reader": 0,
+      "records": [
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "644b8aca6a544af18d6d6656c9f43076",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10698",
+          "title": "公开病例 10698 · 病史与胸片",
+          "candidate": "胸膜孤立性纤维瘤",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "bf7a27cd26204285b1023fcf9ce8c2bc",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "11583",
+          "title": "公开病例 11583 · 病史与胸片",
+          "candidate": "脓毒性肺栓塞",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "8f0693890c25482486cde04ccf93759f",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片 · CD4补充",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "db19b4357f3d4d4e8385936146f617b9",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10304",
+          "title": "新增病例 10304",
+          "candidate": "肺炎",
+          "specific_match": false,
+          "broad_match": false,
+          "status": "completed",
+          "run_id": "a33f0969337f4be0a887aa473e94a029",
+          "review_issues": 1
+        },
+        {
+          "patient_id": "1373",
+          "title": "新增病例 1373",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "9f1154690f8c46f699a018504e4a6787",
+          "review_issues": 2
+        },
+        {
+          "patient_id": "14432",
+          "title": "新增病例 14432",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "08776bd8141045fe894162c435126ade",
+          "review_issues": 1
+        }
+      ]
+    }
+  },
+  "selected_reader": "legacy",
+  "selection_used_test_scores": false,
+  "prospective_test_patients": 20,
+  "prospective_test": {
+    "legacy": {
+      "direct": {
+        "tasks": 20,
+        "completed": 20,
+        "correct": 12,
+        "accuracy": 0.6,
+        "wilson_95_ci": [
+          0.3866,
+          0.7812
+        ],
+        "median_seconds": 6.75
+      },
+      "tools": {
+        "tasks": 20,
+        "completed": 20,
+        "correct": 13,
+        "accuracy": 0.65,
+        "wilson_95_ci": [
+          0.4329,
+          0.8188
+        ],
+        "median_seconds": 7.08
+      }
+    },
+    "nvreason": {
+      "tools": {
+        "tasks": 20,
+        "completed": 20,
+        "correct": 12,
+        "accuracy": 0.6,
+        "wilson_95_ci": [
+          0.3866,
+          0.7812
+        ],
+        "median_seconds": 15.71
+      }
+    }
+  },
+  "test_manifest_sha256": "bf645118b0ec0e3c4eab9f8585c41663de53523c28280d024749b3dd35c8372f",
+  "limitations": [
+    "Known-case label matches are development evidence, not clinical accuracy.",
+    "20 new public MCQs; pretraining contamination unknown; no clinical expert grading.",
+    "Source and pipeline changes are combined; reader comparison holds them fixed.",
+    "Prospective20 MCQs evaluate reader assistance, not independent full-report diagnostic accuracy."
+  ],
+  "paired_outcomes": {
+    "direct_vs_legacy": {
+      "patients": 20,
+      "both_correct": 11,
+      "first_only_correct": 1,
+      "second_only_correct": 2,
+      "both_wrong": 6,
+      "mcnemar_exact_p": 1
+    },
+    "legacy_vs_nvreason": {
+      "patients": 20,
+      "both_correct": 12,
+      "first_only_correct": 1,
+      "second_only_correct": 0,
+      "both_wrong": 7,
+      "mcnemar_exact_p": 1
+    },
+    "direct_vs_nvreason": {
+      "patients": 20,
+      "both_correct": 11,
+      "first_only_correct": 1,
+      "second_only_correct": 1,
+      "both_wrong": 7,
+      "mcnemar_exact_p": 1
+    }
+  },
+  "evaluated_pipeline_archive": "data/quality_v3/evaluated_pipeline.zip",
+  "evaluated_pipeline_archive_sha256": "de2ddda58576cb9834bd6befbcbf8bc56cc0b5dd04000fcdab1eb14c49c70f61",
+  "engine_tests_passed": 60,
+  "experimental_reader_note": "NV-Reason was not promoted. Its generated reports also contained dubious device/normality statements; these are preserved for audit, not verified patient facts.",
+  "prospective_protocol": "Minimal question-and-image MCQs with optional reader outputs; does not exercise the full clinical-report retrieval, drafting and verification workflow."
+}

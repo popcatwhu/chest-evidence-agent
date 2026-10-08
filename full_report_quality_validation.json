@@ -1,0 +1,396 @@
+{
+  "task": "full_report_quality_v4",
+  "clinical_accuracy_validated": false,
+  "development_selection": {
+    "clinical_contrast_enabled": true,
+    "baseline_specific_matches": 3,
+    "candidate_specific_matches": 4,
+    "baseline_development_choices_correct": 7,
+    "candidate_development_choices_correct": 8,
+    "baseline_deterministic_report_issues": 0,
+    "candidate_deterministic_report_issues": 0,
+    "development_baseline": {
+      "complete": true,
+      "inputs": 7,
+      "patients": 6,
+      "specific_matches": 3,
+      "broad_matches": 5,
+      "unresolved_issues": 2,
+      "median_warm_seconds": 44.04,
+      "missing_required_reader": 0,
+      "records": [
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "55c6a5ed30424e439d464c6290051b9a",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10698",
+          "title": "公开病例 10698 · 病史与胸片",
+          "candidate": "胸膜孤立性纤维瘤",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "60cdfc58b91342b3a1471c2cf097ff5c",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "11583",
+          "title": "公开病例 11583 · 病史与胸片",
+          "candidate": "脓毒性肺栓塞",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "8f9fdc7ed92945d19e151534dc25632f",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片 · CD4补充",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "e8ce191dbc05454e86394e3212da8e86",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10304",
+          "title": "新增病例 10304",
+          "candidate": "肺癌",
+          "specific_match": false,
+          "broad_match": false,
+          "status": "completed",
+          "run_id": "1711e1a2c52c4262bd2e6942a2a3176a",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "1373",
+          "title": "新增病例 1373",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "d2f4ceb94637425483e91af4e60a474e",
+          "review_issues": 1
+        },
+        {
+          "patient_id": "14432",
+          "title": "新增病例 14432",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "bbe7ef2c90d1412bb5b507da7a5cd9fd",
+          "review_issues": 1
+        }
+      ]
+    },
+    "development_candidate": {
+      "complete": true,
+      "inputs": 7,
+      "patients": 6,
+      "specific_matches": 4,
+      "broad_matches": 5,
+      "unresolved_issues": 13,
+      "median_warm_seconds": 66.6,
+      "missing_required_reader": 0,
+      "records": [
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "d80b143a8db34312b60c68a66e10aa31",
+          "review_issues": 2
+        },
+        {
+          "patient_id": "10698",
+          "title": "公开病例 10698 · 病史与胸片",
+          "candidate": "胸膜孤立性纤维瘤",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "e4ff17621a65454ba6cc75e18d4d0660",
+          "review_issues": 2
+        },
+        {
+          "patient_id": "11583",
+          "title": "公开病例 11583 · 病史与胸片",
+          "candidate": "脓毒性肺栓塞",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "2c5105ca739544b49bbf5aaea97d42eb",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "6399",
+          "title": "公开病例 6399 · 病史与胸片 · CD4补充",
+          "candidate": "肺孢子菌肺炎",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "81ddf25b1e0a4364b5e910b4f913c443",
+          "review_issues": 0
+        },
+        {
+          "patient_id": "10304",
+          "title": "新增病例 10304",
+          "candidate": "肺癌",
+          "specific_match": false,
+          "broad_match": false,
+          "status": "completed",
+          "run_id": "c77223bc91234fa188cc79f14be3b924",
+          "review_issues": 4
+        },
+        {
+          "patient_id": "1373",
+          "title": "新增病例 1373",
+          "candidate": "气胸",
+          "specific_match": false,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "80d5a4ea014e40fe8106eb92df2484e8",
+          "review_issues": 4
+        },
+        {
+          "patient_id": "14432",
+          "title": "新增病例 14432",
+          "candidate": "Catamenial pneumothorax",
+          "specific_match": true,
+          "broad_match": true,
+          "status": "completed",
+          "run_id": "43623570184f47ef9fcc363c08a466c6",
+          "review_issues": 1
+        }
+      ]
+    },
+    "policy": {
+      "objective": "Full-report diagnosis quality iteration; diagnostic reasoning and critical clinical evidence coverage",
+      "development": "Existing6 open-diagnosis patients plus existing12 MCQ development patients; supplemented patient is not counted twice.",
+      "test": "20 new public patients, disjoint from previous6+12+50+20; same history, image and published question for all full-report strategies.",
+      "blind_policy": "Do not inspect held-out baseline predictions or grading before the candidate and deployment decision are frozen. Progress log contains status only.",
+      "selection": "Candidate must not reduce specific-reference matches on6 original development patients or exact choice accuracy on12 development MCQs; prioritize increased open-diagnosis specific matches, then fewer deterministic report issues, then development choice accuracy. If no measured development benefit, retain current workflow. Selection is frozen before reading20 test outcomes.",
+      "test_modes": [
+        "baseline direct full report",
+        "baseline verified full report",
+        "candidate verified full report if promoted"
+      ],
+      "failure_policy": "Retain failure in denominator; no silent output retries, no hidden disease reference in model input.",
+      "success_criteria": [
+        "Publish complete20 paired full-report baseline results; evaluate candidate only after development selection is frozen.",
+        "Record anatomy/etiology separation, distinctive history coverage, contradiction handling and confirmation-check quality.",
+        "Retain baseline or deploy measured development winner; no tuning on20 held-out outcomes.",
+        "LAN website and historical reports remain accessible; verify final real inference."
+      ],
+      "limitations": [
+        "Public benchmark with unknown pretraining contamination.",
+        "Exact MCQ grading is not clinical expert grading of the full report.",
+        "Known-case name matches measure development regression only."
+      ]
+    },
+    "test_outcomes_used_for_selection": false
+  },
+  "frozen_test_patients": 20,
+  "test_baseline": {
+    "modes": {
+      "direct": {
+        "tasks": 20,
+        "completed": 17,
+        "correct": 13,
+        "accuracy": 0.65,
+        "wilson_95_ci": [
+          0.4329,
+          0.8188
+        ],
+        "invalid_or_missing_choices": 3
+      },
+      "verified": {
+        "tasks": 20,
+        "completed": 20,
+        "correct": 15,
+        "accuracy": 0.75,
+        "wilson_95_ci": [
+          0.5313,
+          0.8881
+        ],
+        "invalid_or_missing_choices": 0
+      }
+    },
+    "paired": {
+      "patients": 20,
+      "both_correct": 11,
+      "direct_only_correct": 2,
+      "verified_only_correct": 4,
+      "both_wrong": 3
+    }
+  },
+  "test_candidate": {
+    "modes": {
+      "verified": {
+        "tasks": 20,
+        "completed": 20,
+        "correct": 15,
+        "accuracy": 0.75,
+        "wilson_95_ci": [
+          0.5313,
+          0.8881
+        ],
+        "invalid_or_missing_choices": 0
+      }
+    },
+    "paired": {}
+  },
+  "test_manifest_sha256": "6f8df876a0f1c5cd46616ec80d5f84cf81e425babca668b3ec1ce65b45ca8f4b",
+  "limitations": [
+    "Exact choice scoring evaluates diagnostic MCQ conclusions within full reports, not clinical expert correctness.",
+    "Public pretraining contamination unknown; known6 open-case name matches are development evidence."
+  ],
+  "audit": {
+    "same_history_questions_and_image_pixels": true,
+    "complete_tasks_and_grading_checked": true,
+    "clinical_expert_scoring_performed": false,
+    "report_quality": {
+      "direct": {
+        "tasks": 20,
+        "completed": 17,
+        "failed_or_interrupted": 3,
+        "terminal_errors": [
+          {
+            "case_id": "15425",
+            "error": "模型输出被截断；不能把内层候选对象当成完整报告"
+          },
+          {
+            "case_id": "8935",
+            "error": "模型输出被截断；不能把内层候选对象当成完整报告"
+          },
+          {
+            "case_id": "1673",
+            "error": "模型输出被截断；不能把内层候选对象当成完整报告"
+          }
+        ],
+        "deterministic_report_issues": 49,
+        "needs_review_reports": 17,
+        "median_report_seconds": 9.83,
+        "gpu_peak_reserved_gib": 21.75,
+        "usable_contrasts": 0,
+        "literal_clues_retained": 0,
+        "quoted_observation_conflicts": 0
+      },
+      "verified": {
+        "tasks": 20,
+        "completed": 20,
+        "failed_or_interrupted": 0,
+        "terminal_errors": [],
+        "deterministic_report_issues": 1,
+        "needs_review_reports": 11,
+        "median_report_seconds": 41.120000000000005,
+        "gpu_peak_reserved_gib": 21.75,
+        "usable_contrasts": 0,
+        "literal_clues_retained": 0,
+        "quoted_observation_conflicts": 0
+      },
+      "candidate_verified": {
+        "tasks": 20,
+        "completed": 20,
+        "failed_or_interrupted": 0,
+        "terminal_errors": [],
+        "deterministic_report_issues": 2,
+        "needs_review_reports": 18,
+        "median_report_seconds": 58.25,
+        "gpu_peak_reserved_gib": 21.62,
+        "usable_contrasts": 12,
+        "literal_clues_retained": 13,
+        "quoted_observation_conflicts": 0
+      }
+    },
+    "paired": {
+      "direct_vs_baseline_verified": {
+        "patients": 20,
+        "both_correct": 11,
+        "first_only_correct": 2,
+        "second_only_correct": 4,
+        "both_wrong": 3,
+        "mcnemar_exact_two_sided_p": 0.6875,
+        "changed_patients": [
+          {
+            "case_id": "4295",
+            "first_correct": true,
+            "second_correct": false
+          },
+          {
+            "case_id": "16895",
+            "first_correct": false,
+            "second_correct": true
+          },
+          {
+            "case_id": "9374",
+            "first_correct": false,
+            "second_correct": true
+          },
+          {
+            "case_id": "8935",
+            "first_correct": false,
+            "second_correct": true
+          },
+          {
+            "case_id": "1673",
+            "first_correct": false,
+            "second_correct": true
+          },
+          {
+            "case_id": "3686",
+            "first_correct": true,
+            "second_correct": false
+          }
+        ]
+      },
+      "baseline_vs_candidate_verified": {
+        "patients": 20,
+        "both_correct": 15,
+        "first_only_correct": 0,
+        "second_only_correct": 0,
+        "both_wrong": 5,
+        "mcnemar_exact_two_sided_p": 1,
+        "changed_patients": []
+      }
+    },
+    "patient_disjoint_from_previous_experiments": true
+  },
+  "archives": {
+    "baseline_pipeline.zip": "d456058f84219ab43d2add2a87a6e0e554912fdae9db6a99b3865c560753292a",
+    "candidate_pipeline.zip": "405b31108aead15d562a10e210ea9cc3cdaf8bfe79d2eaf66b0a379f8e569b4f"
+  },
+  "audit_limits": [
+    "Source and citation checks prove provenance, not truth of the diagnosis or image interpretation.",
+    "needs_review counts include unfinished or ungrounded model review; distinguish them from deterministic report errors.",
+    "Full reports answer published MCQs with additional original patient history; do not pool with earlier minimal MCQ scores."
+  ],
+  "deployment_note": "Only default CHEST_CLINICAL_CONTRAST changed0to1 after frozen tests. Evaluated inference code and corpus are retained in candidate_pipeline.zip; evaluations explicitly used True.",
+  "engine_tests_before_default_switch": 69,
+  "engine_tests_passed": 69,
+  "deployment_health": {
+    "backend": "local",
+    "model_name": "Lingshu-32B-NF4",
+    "model_ready": true,
+    "cxr_reader": "legacy",
+    "clinical_contrast": true,
+    "inference_paused": false,
+    "load_nf4": false,
+    "recheck_original_image": true,
+    "constrained_json": true,
+    "max_input_tokens": 8192,
+    "model_loaded": true,
+    "knowledge_documents": 12
+  },
+  "live_inference_smoke": "data/quality_v4/api_smoke_result.json",
+  "engine_json_generation_attempts": "Pre-existing maximum2 attempts per structured backend call, raw outputs retained. Evaluators never resubmit a failed terminal case."
+}

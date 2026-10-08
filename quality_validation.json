@@ -1,0 +1,101 @@
+{
+  "tests_passed": 24,
+  "development_patients": 3,
+  "input_variants": 4,
+  "independent_clinical_evaluation": false,
+  "comparison_changes": [
+    "fact grounding",
+    "full-context retrieval",
+    "expanded source corpus",
+    "anchored review",
+    "original-image recheck"
+  ],
+  "rows": [
+    {
+      "case": "公开病例 6399 · 病史与胸片",
+      "before": "肺孢子菌感染",
+      "after": "肺孢子菌肺炎",
+      "status": "completed",
+      "missing_information": [
+        "需要进行痰培养或组织活检以确认病原体"
+      ],
+      "verification": {
+        "performed": true,
+        "issues": [],
+        "notes": [
+          "复核将其他证据误认为分类分数"
+        ],
+        "details": [],
+        "status": "needs_review",
+        "note": "引用检查与模型复核不能证明临床正确性"
+      },
+      "run_id": "24bae5a6882945db88010f0eb1443b2b",
+      "seconds": 18.29
+    },
+    {
+      "case": "公开病例 10698 · 病史与胸片",
+      "before": "肺部感染",
+      "after": "肺部感染",
+      "status": "completed",
+      "missing_information": [
+        "需要进行痰培养以确认病原体"
+      ],
+      "verification": {
+        "performed": true,
+        "issues": [],
+        "notes": [
+          "复核意见无法对应报告原句：本次判断基于胸片显示右侧肺野密度增高，但无症状且无石棉暴露史，故考虑肺部感染可能性较大。"
+        ],
+        "details": [],
+        "status": "needs_review",
+        "note": "引用检查与模型复核不能证明临床正确性"
+      },
+      "run_id": "4d4cfaed108342c195ca6d0b6c6b60bb",
+      "seconds": 13.11
+    },
+    {
+      "case": "公开病例 11583 · 病史与胸片",
+      "before": "肺炎",
+      "after": "脓毒性肺栓塞",
+      "status": "completed",
+      "missing_information": [
+        "需要进行病原学检测以确认具体的感染类型。",
+        "需要进一步了解患者的免疫状态，以评估是否为免疫抑制状态。"
+      ],
+      "verification": {
+        "performed": true,
+        "issues": [],
+        "notes": [
+          "复核意见无法对应报告原句：脓毒性肺栓塞成为最可能的诊断。"
+        ],
+        "details": [],
+        "status": "needs_review",
+        "note": "引用检查与模型复核不能证明临床正确性"
+      },
+      "run_id": "9d65a6b3571c4082a35fec48221b61ba",
+      "seconds": 20.44
+    },
+    {
+      "case": "公开病例 6399 · 病史与胸片 · CD4补充",
+      "before": "肺炎",
+      "after": "肺孢子菌肺炎",
+      "status": "completed",
+      "missing_information": [
+        "需要进行痰培养或组织活检以确认病原体"
+      ],
+      "verification": {
+        "performed": true,
+        "issues": [],
+        "notes": [],
+        "details": [],
+        "status": "passed_checks",
+        "note": "引用检查与模型复核不能证明临床正确性"
+      },
+      "run_id": "a7d20fbe35354e77ac6746895a2e1f95",
+      "seconds": 13.14
+    }
+  ],
+  "known_failure": "10698: pleural mass not recognized reliably; incorrect infection candidate remains",
+  "before_median_seconds": 8.004999999999999,
+  "after_median_seconds": 15.715
+}
