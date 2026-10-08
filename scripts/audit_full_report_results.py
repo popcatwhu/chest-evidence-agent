@@ -1,16 +1,28 @@
 """Audit fixed inputs, exact grading, paired outcomes and report limitations."""
 import hashlib
 import json
-import math
 from pathlib import Path
 import statistics
 import sys
 
 ROOT=Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(ROOT))
-from scripts.run_full_report_iteration import deterministic_issues
-from scripts.build_medical_comparison import paired
 from scripts.evaluate_http import summarize
+
+
+def deterministic_issues(run):
+    from chest_agent.schemas import Report,Evidence,CaseProfile,validate_evidence
+    from chest_agent.quality import known_test_conflicts
+    from chest_agent.recommendations import check_recommendations
+    from chest_agent.clinical_consistency import clinical_inconsistencies
+    from chest_agent.diagnosis_checks import diagnosis_issues
+    if not run.get('result'):return ['Report did not complete']
+    result=run['result'];report=Report.model_validate(result['report'])
+    evidence=[Evidence.model_validate(e) for e in result['evidence']]
+    profile=CaseProfile.model_validate(result.get('profile',{'facts':[]}))
+    return list(dict.fromkeys(validate_evidence(report,evidence,allow_original=result['reasoning_reads_original_image'])
+        +known_test_conflicts(report,profile)+check_recommendations(report,evidence,require_sources=run['mode']!='direct')
+        +clinical_inconsistencies(report,evidence)+diagnosis_issues(report)))
 
 
 def checked(path,manifest,modes):
@@ -61,41 +73,21 @@ def quality(rows):
     return result
 
 
-def pair(first,second):
-    # The original paired helper uses 'variant'; retain evaluator modes via temporary copies.
-    a={'records':[{**r,'variant':r['mode']} for r in first]}
-    b={'records':[{**r,'variant':r['mode']} for r in second]}
-    out=paired(a,b,first[0]['mode'],second[0]['mode'])
-    n=out['first_only_correct']+out['second_only_correct'];k=min(out['first_only_correct'],out['second_only_correct'])
-    out['mcnemar_exact_two_sided_p']=min(1,2*sum(math.comb(n,i) for i in range(k+1))/2**n)
-    out['changed_patients']=[{'case_id':x['case_id'],'first_correct':x['correct'],
-        'second_correct':next(y['correct'] for y in second if y['case_id']==x['case_id'])}
-        for x in first if x['correct']!=next(y['correct'] for y in second if y['case_id']==x['case_id'])]
-    return out
-
-
 def main():
-    root=ROOT/'data/quality_v4';manifest=root/'test20/manifest.json'
-    result=json.loads((ROOT/'full_report_quality_validation.json').read_text())
-    baseline=checked(root/'baseline_test20.json',manifest,['direct','verified'])
-    groups={mode:[r for r in baseline['records'] if r['mode']==mode] for mode in ['direct','verified']}
-    if result['development_selection']['clinical_contrast_enabled']:
-        candidate=checked(root/'candidate_test20.json',manifest,['verified'])
-        groups['candidate_verified']=candidate['records']
-    audit={'same_history_questions_and_image_pixels':True,
-        'complete_tasks_and_grading_checked':True,'clinical_expert_scoring_performed':False,
-        'report_quality':{k:quality(v) for k,v in groups.items()},
-        'paired':{'direct_vs_baseline_verified':pair(groups['direct'],groups['verified'])}}
-    if 'candidate_verified' in groups:
-        audit['paired']['baseline_vs_candidate_verified']=pair(groups['verified'],groups['candidate_verified'])
-    result['audit']=audit
-    result['archives']={name:hashlib.sha256((root/name).read_bytes()).hexdigest()
-        for name in ['baseline_pipeline.zip','candidate_pipeline.zip']}
-    result['audit_limits']=['Source and citation checks prove provenance, not truth of the diagnosis or image interpretation.',
-        'needs_review counts include unfinished or ungrounded model review; distinguish them from deterministic report errors.',
-        'Full reports answer published MCQs with additional original patient history; do not pool with earlier minimal MCQ scores.']
-    (ROOT/'full_report_quality_validation.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
-    print(json.dumps(audit,ensure_ascii=False,indent=2))
+    import argparse
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--manifest',type=Path,required=True)
+    parser.add_argument('--results',type=Path,required=True)
+    parser.add_argument('--output',type=Path,required=True)
+    args=parser.parse_args()
+    data=checked(args.results,args.manifest,['verified'])
+    audit={'complete_tasks_and_grading_checked':True,
+           'clinical_expert_scoring_performed':False,
+           'test':data['summary']['modes']['verified'],
+           'report_quality':quality(data['records'])}
+    args.output.parent.mkdir(parents=True,exist_ok=True)
+    args.output.write_text(json.dumps(audit,ensure_ascii=False,indent=2)+'\n')
+    print('Audit saved:',args.output)
 
 
 if __name__=='__main__':main()

@@ -1,12 +1,12 @@
 import pytest
 from chest_agent import store, workflow,config
 from chest_agent.schemas import Plan, Report, Review, CaseProfile, Observation
+from chest_agent.clinical_contrast import ClinicalContrast
 
 
 @pytest.fixture(autouse=True)
 def no_external_models_in_workflow_unit_tests(monkeypatch):
     monkeypatch.setattr(config,'CXR_EXPERT_ENABLED',False)
-    monkeypatch.setattr(config,'CLINICAL_CONTRAST',False)
 
 
 def make_report(ref):
@@ -20,7 +20,7 @@ def test_failed_tool_triggers_repair_and_keeps_failure_visible(tmp_path,monkeypa
     case=store.create_case('test','已报告症状','example.png')
     run=store.create_run(case['id'],'分析','verified')
     replies=iter([CaseProfile(facts=[]),Observation(observations=[],limitations=[]),Plan(tools=['classify'],query='pneumonia',reason='检查影像'),
-                  make_report('I-classify'),Review(issues=[]),make_report('C-1'),Review(issues=[])])
+                  ClinicalContrast(),make_report('I-classify'),Review(issues=[]),make_report('C-1'),Review(issues=[])])
     monkeypatch.setattr(workflow.backend,'json',lambda *a,**kw:next(replies))
     def fail(*args):
         raise RuntimeError('工具失败测试')
@@ -39,7 +39,7 @@ def test_unfixed_evidence_is_flagged_after_bounded_repair(tmp_path,monkeypatch):
     store.init_db()
     case=store.create_case('test','已报告症状')
     run=store.create_run(case['id'],'分析','verified')
-    replies=iter([CaseProfile(facts=[]),Plan(tools=[],query='pneumonia',reason='分析'),make_report('missing'),Review(issues=[]),
+    replies=iter([CaseProfile(facts=[]),Plan(tools=[],query='pneumonia',reason='分析'),ClinicalContrast(),make_report('missing'),Review(issues=[]),
                   make_report('missing'),Review(issues=[])])
     monkeypatch.setattr(workflow.backend,'json',lambda *a,**kw:next(replies))
     monkeypatch.setattr(workflow,'retrieve',lambda query:[])
@@ -70,6 +70,7 @@ def test_invalid_review_keeps_valid_draft_without_claiming_passed(tmp_path,monke
     def response(prompt,schema,*a,**kw):
         if schema is CaseProfile:return CaseProfile(facts=[])
         if schema is Plan:return Plan(tools=[],query='pneumonia',reason='分析')
+        if schema is ClinicalContrast:return ClinicalContrast()
         if schema is Report:return make_report('C-1')
         if schema is Review:raise ValueError('invalid reviewer output')
     monkeypatch.setattr(workflow.backend,'json',response)

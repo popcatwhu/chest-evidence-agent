@@ -94,8 +94,8 @@ def main():
             checks.append('Connection dialog and LAN clipboard fallback')
 
             page.locator('[data-view="evaluation"]').click()
-            expect(page.locator('.eval-table tbody tr')).to_have_count(3)
-            expect(page.locator('.selected-model')).to_contain_text('66%')
+            expect(page.locator('.eval-table tbody tr')).to_have_count(5)
+            expect(page.locator('.eval-stat').nth(1)).to_contain_text('75%')
             page.screenshot(path=str(output/'evaluation.png'), full_page=True)
             checks.append('Real frozen evaluation snapshot')
 
@@ -111,7 +111,7 @@ def main():
 
             if args.inference:
                 page.set_viewport_size({'width':1440,'height':1000})
-                page.locator('[data-mode="direct"]').click()
+                page.locator('[data-mode="verified"]').click()
                 page.locator('#question').fill('请综合原始胸片和已知病史，给出最可能诊断和有依据的鉴别诊断。')
                 with page.expect_response(lambda r: '/runs' in r.url and r.request.method == 'POST') as event:
                     page.locator('#analyze').click()
@@ -119,7 +119,7 @@ def main():
                 page.wait_for_function('localStorage.getItem("chestActiveRun") !== null')
                 expect(page.locator('#progress-panel')).to_be_visible()
                 page.reload(wait_until='networkidle')
-                page.wait_for_function('localStorage.getItem("chestActiveRun") === null', timeout=180000)
+                page.wait_for_function('localStorage.getItem("chestActiveRun") === null', timeout=600000)
                 expect(page.locator('#run-status')).to_have_text('已完成')
                 expect(page.locator('.primary-diagnosis')).to_be_visible()
                 page.screenshot(path=str(output/'inference-complete.png'), full_page=True)

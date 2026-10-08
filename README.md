@@ -46,37 +46,22 @@ flowchart LR
 
 ## 真实评测结果
 
-所有模型对照均使用真实推理输出。参考答案、最终诊断和图注只交给评分端；失败任务保留在分母。以下各批患者互不重叠，任务口径不同，不合并准确率。
+当前 Agent 使用完整病史、原始胸片和公开问题，执行临床证据对照、报告生成与复核。在按患者隔离的20例公开测试中：
 
-**50位公开患者：简洁选择题接口，原题 + 胸片。**
+| 指标 | 结果 |
+| --- | --- |
+| 报告中的选择题结论 | 15/20，75% |
+| 完整报告生成 | 20/20 |
+| 耗时中位数 | 58.25秒 |
+| GPU峰值保留显存 | 21.62 GiB |
+| 保留可用临床证据对照 | 12/20 |
+| 标记仍需复核 | 18/20 |
 
-| 模型 | 直接答题 | 原始工具辅助 | 核验工具后 |
-| --- | --- | --- | --- |
-| Qwen3-VL-32B NF4 | 24/50，48% | 23/50，46% | 23/50，46% |
-| Lingshu-7B BF16 | 28/50，56% | 23/50，46% | 27/50，54% |
-| Lingshu-32B NF4 | 32/50，64% | 33/50，66% | 33/50，66% |
+75%衡量报告中的选择题结论，不代表临床诊断准确率；样本较小，公开数据预训练污染情况未知，尚未进行临床专家评分。原文线索匹配和引用检查也不能证明医学正确。临床对照未完成时仍保存有效报告，同时标记待复核。
 
-**另20位新患者：观察工具对照，仍使用简洁答题接口。**
+6位已知开发患者中，具体诊断名称符合参考结局的为4/6，疾病大类为5/6；这些是开发验证，不能作为独立准确率。结核仍误判，张力性气胸仍只识别到大类。
 
-| 策略 | 正确选项 | 中位耗时 |
-| --- | --- | --- |
-| Lingshu32直接答题 | 12/20，60% | 6.75秒 |
-| 旧观察工具辅助 | 13/20，65% | 7.08秒 |
-| NV-Reason工具辅助 | 12/20，60% | 15.71秒 |
-
-**再20位新患者：相同原始病史、胸片和原题，生成完整报告。**
-
-| 流程 | 正确选项 | 完成报告 | 中位耗时 |
-| --- | --- | --- | --- |
-| 直接推理 | 13/20，65% | 17/20 | 9.83秒 |
-| 旧Agent | 15/20，75% | 20/20 | 41.12秒 |
-| 加临床证据对照的Agent | 15/20，75% | 20/20 | 58.25秒 |
-
-新旧Agent同对15位、同错5位，新增步骤未提高这批患者的得分，耗时及待复核标记增加。已知6位开发患者的具体诊断名称匹配从3/6变为4/6，但不能作为独立准确率。结核仍误判，张力性气胸仍只识别到大类。
-
-本机69项工程测试通过；RTX5090 32GB运行主模型的完整报告测试中，PyTorch峰值保留显存约21.6–21.8GiB。公开样本存在未知预训练污染，未进行临床专家评分。75%衡量的是完整报告里的选择题结论，不是开放诊断或临床准确率。
-
-详细方法及迭代历史见 [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)。实际汇总包括 [模型对照](medical_model_validation.json)、[工具对照](diagnostic_quality_validation.json) 和 [完整报告对照](full_report_quality_validation.json)。这些是测量记录，首次启动不会自动产生相同成绩。
+实际汇总见 [full_report_quality_validation.json](full_report_quality_validation.json)，评测流程见 [docs/EVALUATION.md](docs/EVALUATION.md)。69项工程测试通过。
 
 ## 安装
 
@@ -154,8 +139,7 @@ CHEST_HOST=0.0.0.0 CHEST_PORT=7860 bash scripts/start.sh
 | `CHEST_HOST` / `CHEST_PORT` | `127.0.0.1` / `7860` | 监听地址和端口 |
 | `CHEST_BACKEND` | `local` | local或api |
 | `CHEST_CXR_EXPERT` | `1` | 启用专用观察工具 |
-| `CHEST_CXR_READER` | `legacy` | 默认旧工具；nvreason仅作实验 |
-| `CHEST_CLINICAL_CONTRAST` | `1` | 可用0关闭新增临床对照 |
+| `CHEST_CXR_READER` | `iamjb` | IAMJB观察模型；nvreason为可选实验模型 |
 | `CHEST_RECHECK_IMAGE` | `1` | 诊断、复核、修订接收原图 |
 | `CHEST_CONSTRAINED_JSON` | `1` | 本地JSON Schema解码约束 |
 | `CHEST_MAX_INPUT_TOKENS` | `8192` | 当前输入上限 |
@@ -169,8 +153,8 @@ CHEST_HOST=0.0.0.0 CHEST_PORT=7860 bash scripts/start.sh
 python scripts/prepare_benchmark.py --limit 5
 # 需先准备MedRAX元数据，再冻结按患者隔离的样本
 python scripts/prepare_independent_benchmark.py
-# 对常驻服务评测完整报告，默认比较direct和verified
-python scripts/evaluate_http.py --output data/independent/results.json
+# 对常驻服务评测Agent完整报告
+python scripts/evaluate_http.py --modes verified --output data/independent/results.json
 # 简洁答题实验单独执行，避免与完整报告混用
 python scripts/benchmark_mcq.py --output data/minimal_mcq.json
 ```

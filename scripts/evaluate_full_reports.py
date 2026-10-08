@@ -1,4 +1,4 @@
-"""Run full report strategies with blind progress; grading remains in the saved evaluator file."""
+"""Evaluate Agent reports with progress logging separate from grading."""
 import argparse
 from contextlib import redirect_stdout
 import json
@@ -16,7 +16,7 @@ class BlindProgress:
         self.path=path
 
     def write(self, text):
-        # Deliberately discard prediction/reference logging while the candidate is being designed.
+        # Deliberately discard prediction/reference logging in progress logs.
         if self.path.exists():
             result=json.loads(self.path.read_text())
             state={'completed_tasks':len(result['records']), 'complete':result['complete'],
@@ -33,9 +33,9 @@ if __name__=='__main__':
     parser.add_argument('--manifest',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
     parser.add_argument('--base',default='http://127.0.0.1:7860')
-    parser.add_argument('--modes',nargs='+',choices=['direct','verified'],default=['direct','verified'])
+    parser.add_argument('--modes',nargs='+',choices=['direct','verified'],default=['verified'])
     parser.add_argument('--timeout',type=int,default=900)
     args=parser.parse_args()
     with redirect_stdout(BlindProgress(args.output)):
         evaluate(args)
-    print('Full-report evaluation finished; results remain sealed until development selection.',flush=True)
+    print('Full-report evaluation finished; inspect the saved result file.',flush=True)

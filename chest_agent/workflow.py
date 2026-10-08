@@ -193,7 +193,7 @@ def report_prompt(state):
 
 
 def contrast(state):
-    if state['mode']!='verified' or not config.CLINICAL_CONTRAST:
+    if state['mode']!='verified':
         return {'clinical_contrast':None,'contrast_notes':[]}
     log(state,'contrast','对照关键病例线索、候选病因和互相矛盾的观察')
     prompt=contrast_prompt(reasoning_context(state))+'\nTask instructions and options (not patient facts):\n'+state['question']
@@ -341,7 +341,7 @@ def execute(run_id):
                 "plan":state["plan"].model_dump(),'profile':state['profile'].model_dump(),
                 'model':config.MODEL.name,'cxr_expert_enabled':config.CXR_EXPERT_ENABLED,
                 'clinical_contrast':state['clinical_contrast'].model_dump() if state.get('clinical_contrast') else None,
-                'clinical_contrast_enabled':config.CLINICAL_CONTRAST and run['mode']=='verified',
+                'clinical_contrast_enabled':run['mode']=='verified',
                 'cxr_reader':config.CXR_READER,
                 'constrained_json_enabled':config.CONSTRAINED_JSON and config.BACKEND=='local',
                 'reasoning_reads_original_image':bool(reasoning_image(state))}

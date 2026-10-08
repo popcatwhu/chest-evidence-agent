@@ -34,7 +34,7 @@ def index():
 @app.get("/api/health")
 def health():
     return {"backend":config.BACKEND, 'model_name':config.MODEL.name,"model_ready":backend.ready() and not config.INFERENCE_PAUSED,
-            'cxr_reader':config.CXR_READER,'clinical_contrast':config.CLINICAL_CONTRAST,
+            'cxr_reader':config.CXR_READER,'clinical_contrast':True,
             'inference_paused':config.INFERENCE_PAUSED,'load_nf4':config.LOAD_NF4,
             'recheck_original_image':config.RECHECK_IMAGE,'constrained_json':config.CONSTRAINED_JSON and config.BACKEND=='local',
             'max_input_tokens':config.MAX_INPUT_TOKENS,

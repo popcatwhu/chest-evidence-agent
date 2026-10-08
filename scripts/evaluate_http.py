@@ -125,7 +125,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--manifest',type=Path,default=ROOT/'data/independent/manifest.json')
     parser.add_argument('--output',type=Path,default=ROOT/'data/independent/results.json')
-    parser.add_argument('--modes',nargs='+',choices=['direct','verified'],default=['direct','verified'])
+    parser.add_argument('--modes',nargs='+',choices=['direct','verified'],default=['verified'])
     parser.add_argument('--base',default='http://127.0.0.1:7860')
     parser.add_argument('--timeout',type=int,default=900)
     evaluate(parser.parse_args())

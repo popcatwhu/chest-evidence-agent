@@ -13,7 +13,6 @@ def report():
 
 
 def test_enabled_contrast_reaches_report_and_is_saved(tmp_path,monkeypatch):
-    monkeypatch.setattr(config,'CLINICAL_CONTRAST',True,raising=False)
     monkeypatch.setattr(config,'CXR_EXPERT_ENABLED',False)
     monkeypatch.setattr(store,'DB',tmp_path/'test.sqlite3');store.init_db()
     case=store.create_case('test','reported fever');rid=store.create_run(case['id'],'分析','verified')
@@ -38,7 +37,6 @@ def test_enabled_contrast_reaches_report_and_is_saved(tmp_path,monkeypatch):
 
 
 def test_failed_contrast_is_visible_without_losing_valid_report(tmp_path,monkeypatch):
-    monkeypatch.setattr(config,'CLINICAL_CONTRAST',True,raising=False)
     monkeypatch.setattr(store,'DB',tmp_path/'test.sqlite3');store.init_db()
     case=store.create_case('test','reported fever');rid=store.create_run(case['id'],'分析','verified')
     def reply(prompt,schema,*args,**kwargs):
@@ -55,9 +53,7 @@ def test_failed_contrast_is_visible_without_losing_valid_report(tmp_path,monkeyp
     assert any('临床证据对照未完成' in n for n in run['result']['verification']['notes'])
 
 
-def test_disabled_contrast_does_not_call_model(monkeypatch):
-    monkeypatch.setattr(config,'CLINICAL_CONTRAST',False,raising=False)
+def test_comparison_modes_do_not_call_contrast_model(monkeypatch):
     monkeypatch.setattr(wf.backend,'json',lambda *a,**k:pytest.fail('Unexpected extra call'))
-    assert wf.contrast({'mode':'verified'})['clinical_contrast'] is None
-    monkeypatch.setattr(config,'CLINICAL_CONTRAST',True)
-    assert wf.contrast({'mode':'direct'})['clinical_contrast'] is None
+    for mode in ['direct','tools']:
+        assert wf.contrast({'mode':mode})['clinical_contrast'] is None

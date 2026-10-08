@@ -29,5 +29,5 @@ def test_reader_identity_changes_tool_cache_key(tmp_path,monkeypatch):
     (folder/'config.json').write_text('{}');(folder/'source_revision.json').write_text('{}')
     monkeypatch.setattr(config,'NVREASON_MODEL',folder)
     monkeypatch.setattr(config,'CXR_FINDINGS_MODEL',folder)
-    monkeypatch.setattr(config,'CXR_READER','legacy');original=exam.tool_signature()
+    monkeypatch.setattr(config,'CXR_READER','iamjb');original=exam.tool_signature()
     monkeypatch.setattr(config,'CXR_READER','nvreason');assert exam.tool_signature()!=original

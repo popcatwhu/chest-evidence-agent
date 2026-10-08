@@ -18,7 +18,7 @@ class ImageTools:
         if config.CXR_READER=='nvreason':
             from .cxr_reader import reader
             return reader.findings(image_path)
-        if config.CXR_READER!='legacy':
+        if config.CXR_READER!='iamjb':
             raise ValueError('未知的胸片观察模型：'+config.CXR_READER)
         import torch
         from transformers import VisionEncoderDecoderModel,ViTImageProcessor,BertTokenizer
