@@ -80,20 +80,45 @@ def parse_json(text, root_keys=()):
 
 
 class ModelBackend:
-    def __init__(self):
+    def __init__(self, model_path=None, backend_type=None, load_nf4=None):
+        self._model_path = model_path
+        self._backend_type = backend_type
+        self._load_nf4 = load_nf4
         self.model = self.processor = None
         self.lock = Lock()
         self.metrics = []
         self.enforcer_tokenizer_data = None
 
+    @property
+    def model_path(self):
+        return self._model_path if self._model_path is not None else config.MODEL
+
+    @property
+    def backend_type(self):
+        return self._backend_type if self._backend_type is not None else config.BACKEND
+
+    @property
+    def load_nf4(self):
+        return self._load_nf4 if self._load_nf4 is not None else config.LOAD_NF4
+
+    def release(self):
+        import gc
+        import torch
+
+        with self.lock:
+            self.model = self.processor = self.enforcer_tokenizer_data = None
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
     def ready(self):
-        if config.BACKEND == "api":
+        if self.backend_type == "api":
             import os
 
             return bool(os.getenv("OPENAI_API_KEY") and config.API_MODEL)
         try:
             if not all(
-                (config.MODEL / name).exists()
+                (self.model_path / name).exists()
                 for name in [
                     "config.json",
                     "preprocessor_config.json",
@@ -103,10 +128,10 @@ class ModelBackend:
             ):
                 return False
             index = json.loads(
-                (config.MODEL / "model.safetensors.index.json").read_text()
+                (self.model_path / "model.safetensors.index.json").read_text()
             )
             return all(
-                (config.MODEL / name).exists()
+                (self.model_path / name).exists()
                 for name in set(index["weight_map"].values())
             )
         except (FileNotFoundError, KeyError, json.JSONDecodeError):
@@ -115,7 +140,7 @@ class ModelBackend:
     def generate(self, prompt, image_path=None, max_tokens=1800, json_schema=None):
         start = time.monotonic()
         with self.lock:
-            if config.BACKEND == "api":
+            if self.backend_type == "api":
                 from openai import OpenAI
 
                 content = [{"type": "text", "text": prompt}]
@@ -149,15 +174,15 @@ class ModelBackend:
 
                 if self.model is None:
                     self.processor = AutoProcessor.from_pretrained(
-                        config.MODEL,
+                        self.model_path,
                         local_files_only=True,
                         use_fast=False,
                         min_pixels=256 * 28 * 28,
                         max_pixels=768 * 28 * 28,
                     )
-                    model_type = json.loads((config.MODEL / "config.json").read_text())[
-                        "model_type"
-                    ]
+                    model_type = json.loads(
+                        (self.model_path / "config.json").read_text()
+                    )["model_type"]
                     model_classes = {
                         "qwen3_vl": Qwen3VLForConditionalGeneration,
                         "qwen2_5_vl": Qwen2_5_VLForConditionalGeneration,
@@ -167,9 +192,9 @@ class ModelBackend:
                     model_class = model_classes[model_type]
                     load_options = {}
                     model_config = json.loads(
-                        (config.MODEL / "config.json").read_text()
+                        (self.model_path / "config.json").read_text()
                     )
-                    if config.LOAD_NF4 and not model_config.get("quantization_config"):
+                    if self.load_nf4 and not model_config.get("quantization_config"):
                         from transformers import BitsAndBytesConfig
 
                         load_options["quantization_config"] = BitsAndBytesConfig(
@@ -180,7 +205,7 @@ class ModelBackend:
                             llm_int8_skip_modules=["visual", "lm_head"],
                         )
                     self.model = model_class.from_pretrained(
-                        config.MODEL,
+                        self.model_path,
                         local_files_only=True,
                         dtype=torch.bfloat16,
                         device_map="cuda:0",
@@ -236,15 +261,16 @@ class ModelBackend:
                     0
                 ]
             metric = {
+                "model": self.model_path.name,
                 "seconds": round(time.monotonic() - start, 2),
                 "output_tokens": tokens,
             }
             metric["constrained_json"] = bool(
                 json_schema is not None
                 and config.CONSTRAINED_JSON
-                and config.BACKEND == "local"
+                and self.backend_type == "local"
             )
-            if config.BACKEND != "api":
+            if self.backend_type != "api":
                 metric["input_tokens"] = input_tokens
             self.metrics.append(metric)
             return output

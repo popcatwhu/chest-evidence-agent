@@ -3,7 +3,7 @@ import time
 from threading import Lock
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
-from . import store, config
+from . import store, config, agents
 from .llm import backend
 from .schemas import (
     Evidence,
@@ -43,6 +43,8 @@ class State(TypedDict, total=False):
     review_details: list[dict]
     clinical_contrast: ClinicalContrast | None
     contrast_notes: list[str]
+    agent_messages: list[dict]
+    collaboration_notes: list[str]
 
 
 def log(state, stage, message):
@@ -68,6 +70,8 @@ def prepare(state):
     return {
         "evidence": evidence,
         "repairs": 0,
+        "agent_messages": [],
+        "collaboration_notes": [],
         "previous": store.previous_report(state["case"]["id"], state["run_id"]),
         "previous_context": store.previous_context(
             state["case"]["id"], state["run_id"]
@@ -129,37 +133,42 @@ def profile(state):
 def observe(state):
     if state["mode"] == "direct" or not state["case"].get("image_path"):
         return {}
-    log(state, "observe", "独立描述胸片可见的形态与位置，不先给疾病结论")
-    result = backend.json(
-        "Describe this chest radiograph carefully: opacities, large masses, nodules, mediastinal displacement and pleural changes. Use image-left/image-right unless orientation is clear. Do not diagnose diseases or assume normality. Provide 2 to 5 specific observations in Chinese or English; uncertainty belongs in limitations.",
-        Observation,
-        state["case"]["image_path"],
-        max_tokens=550,
-    )
-    evidence = Evidence(
-        id="I-observe",
-        kind="image",
-        title="视觉模型的独立胸片观察",
-        content=result.model_dump_json(),
-    )
-    observations = [*state["evidence"], evidence]
-    if config.CXR_EXPERT_ENABLED:
-        log(state, "radiology", "调用胸片专用模型，获得第二种影像观察")
-        try:
-            observations.append(
-                image_tools.findings(state["case"]["image_path"], state["run_id"])
-            )
-        except Exception as error:
-            observations.append(
-                Evidence(
-                    id="I-radiology",
-                    kind="image",
-                    title="胸片专用模型执行失败",
-                    content=str(error),
-                    status="failed",
-                )
-            )
-    return {"evidence": observations}
+    log(state, "radiology_agent", "NV-Reason 影像 Agent 独立分析原始胸片")
+    messages = list(state.get("agent_messages", []))
+    notes = list(state.get("collaboration_notes", []))
+    try:
+        result = agents.radiologist.run(
+            "Describe 2 to 5 directly visible findings with location and morphology. "
+            "Put uncertainty in limitations. Output concise observations, not disease diagnoses.",
+            Observation,
+            state["case"]["image_path"],
+            max_tokens=900,
+        )
+        evidence = Evidence(
+            id="I-observe",
+            kind="image",
+            title="NV-Reason 影像 Agent 的独立观察",
+            content=result.model_dump_json(),
+            source_type="model-generated observation",
+        )
+        messages.append(
+            agents.message(agents.radiologist, "completed", result.model_dump())
+        )
+    except Exception as error:
+        evidence = Evidence(
+            id="I-observe",
+            kind="image",
+            title="影像 Agent 未完成",
+            content=str(error),
+            status="failed",
+        )
+        messages.append(agents.message(agents.radiologist, "failed", error=str(error)))
+        notes.append("影像 Agent 未完成，不能将其失败视为阴性结果")
+    return {
+        "evidence": [*state["evidence"], evidence],
+        "agent_messages": messages,
+        "collaboration_notes": notes,
+    }
 
 
 def analyze(state):
@@ -334,15 +343,37 @@ def contrast_context(state):
 
 
 def diagnose(state):
-    log(state, "diagnose", "综合病例与图像证据，生成候选诊断")
+    log(state, "clinical_agent", "Lingshu 临床 Agent 综合证据，独立形成诊断报告")
     image = reasoning_image(state)
-    result = backend.json(
+    result = agents.clinician.run(
         report_prompt(state), report_schema(state["question"]), image, max_tokens=1800
     )
-    return {"report": result}
+    return {
+        "report": result,
+        "agent_messages": [
+            *state.get("agent_messages", []),
+            agents.message(agents.clinician, "completed", result.model_dump()),
+        ],
+    }
 
 
 def update_report(state):
+    if state.get("mode") == "verified":
+        log(state, "coordinator_agent", "汇总本轮协作结果，保存未解决的质疑与不确定性")
+        state["agent_messages"] = [
+            *state.get("agent_messages", []),
+            agents.message(
+                agents.coordinator,
+                "completed",
+                {
+                    "action": "finalize",
+                    "repairs": state["repairs"],
+                    "unresolved_challenges": state.get("issues", []),
+                    "notes": state.get("review_notes", []),
+                    "conclusion": state["report"].most_likely.name,
+                },
+            ),
+        ]
     result = state["report"]
     if state.get("previous"):
         log(state, "update", "比较本次报告与上次判断，解释补充资料的影响")
@@ -355,7 +386,7 @@ def update_report(state):
         if not new_info:
             previous_name = state["previous"]["most_likely"]["name"]
             result.change_summary = f"本次没有新增病例资料；重新分析的候选判断为{result.most_likely.name}，上次为{previous_name}。"
-            return {"report": result}
+            return {"report": result, "agent_messages": state.get("agent_messages", [])}
         change = backend.json(
             "用中文说明新资料如何影响诊断判断。候选诊断可以不变，但要明确证据变化；"
             "只引用下列新增资料的证据ID，不得写首次分析。\n新增资料："
@@ -373,13 +404,13 @@ def update_report(state):
         result.change_summary = change.summary
     else:
         result.change_summary = "首次分析"
-    return {"report": result}
+    return {"report": result, "agent_messages": state.get("agent_messages", [])}
 
 
 def verify(state):
     if state["mode"] != "verified":
         return {"issues": []}
-    log(state, "verify", "检查证据引用、失败工具引用，并复核结论是否超出证据")
+    log(state, "review_agent", "Qwen 独立审查 Agent 核对临床报告与原始证据")
     issues = (
         validate_evidence(
             state["report"],
@@ -405,18 +436,23 @@ def verify(state):
         + state["report"].model_dump_json()
     )
     try:
-        review = backend.json(
-            review_prompt, Review, reasoning_image(state), max_tokens=800
+        review = agents.reviewer.run(
+            review_prompt, Review, reasoning_image(state), max_tokens=900
         )
-    except ValueError as error:
-        log(state, "verify", "模型复核输出无效；保留诊断草稿，标记需要复核")
+    except Exception as error:
+        log(state, "review_agent", "独立审查未完成；保留诊断草稿，标记需要复核")
         return {
             "issues": issues,
             "review_notes": [
                 *state.get("contrast_notes", []),
+                *state.get("collaboration_notes", []),
                 "语义复核未完成：模型未返回有效的复核结构",
             ],
             "review_details": [],
+            "agent_messages": [
+                *state.get("agent_messages", []),
+                agents.message(agents.reviewer, "failed", error=str(error)),
+            ],
         }
     accepted, notes = anchor_review(review, state["report"], state["evidence"])
     issues = list(
@@ -425,14 +461,29 @@ def verify(state):
     log(state, "verify", "发现 " + str(len(issues)) + " 项待处理问题")
     return {
         "issues": issues,
-        "review_notes": [*state.get("contrast_notes", []), *notes],
+        "review_notes": [
+            *state.get("contrast_notes", []),
+            *state.get("collaboration_notes", []),
+            *notes,
+        ],
+        "agent_messages": [
+            *state.get("agent_messages", []),
+            agents.message(
+                agents.reviewer,
+                "completed",
+                {
+                    "accepted_challenges": [i.model_dump() for i in accepted],
+                    "unanchored_challenges": notes,
+                },
+            ),
+        ],
         "review_details": [i.model_dump() for i in accepted],
     }
 
 
 def repair(state):
-    log(state, "repair", "根据证据问题修订报告，随后重新校验")
-    result = backend.json(
+    log(state, "coordinator_agent", "协调 Agent 根据独立质疑修订报告，随后交回审查")
+    result = agents.coordinator.run(
         report_prompt(state)
         + "\n修改以下报告以解决问题，只保留证据支持的结论："
         + state["report"].model_dump_json()
@@ -442,7 +493,18 @@ def repair(state):
         reasoning_image(state),
         max_tokens=1800,
     )
-    return {"report": result, "repairs": state["repairs"] + 1}
+    return {
+        "report": result,
+        "repairs": state["repairs"] + 1,
+        "agent_messages": [
+            *state.get("agent_messages", []),
+            agents.message(
+                agents.coordinator,
+                "completed",
+                {"challenges": state["issues"], "revised_report": result.model_dump()},
+            ),
+        ],
+    }
 
 
 def route(state):
@@ -509,6 +571,9 @@ def execute(run_id):
         store.update_run(run_id, "running")
         start = time.monotonic()
         metric_start = len(backend.metrics)
+        auxiliary_starts = [
+            (a, len(a.model.metrics)) for a in (agents.radiologist, agents.reviewer)
+        ]
         import torch
 
         if torch.cuda.is_available():
@@ -552,7 +617,14 @@ def execute(run_id):
                 },
                 "metrics": {
                     "elapsed_seconds": round(time.monotonic() - start, 2),
-                    "model_calls": backend.metrics[metric_start:],
+                    "model_calls": [
+                        *backend.metrics[metric_start:],
+                        *[
+                            {**m, "agent": a.name, "model": a.model.model_path.name}
+                            for a, n in auxiliary_starts
+                            for m in a.model.metrics[n:]
+                        ],
+                    ],
                     "tool_calls": len(state["plan"].tools)
                     + int(any(e.id == "I-radiology" for e in state["evidence"])),
                     "repairs": state["repairs"],
@@ -570,6 +642,13 @@ def execute(run_id):
                 "plan": state["plan"].model_dump(),
                 "profile": state["profile"].model_dump(),
                 "model": config.MODEL.name,
+                "collaboration": {
+                    "protocol": "heterogeneous-review-v1",
+                    "agents": agents.roster(),
+                    "messages": state.get("agent_messages", []),
+                    "execution": "serial GPU with one auxiliary model slot",
+                    "independent_review": run["mode"] == "verified",
+                },
                 "cxr_expert_enabled": config.CXR_EXPERT_ENABLED,
                 "clinical_contrast": state["clinical_contrast"].model_dump()
                 if state.get("clinical_contrast")

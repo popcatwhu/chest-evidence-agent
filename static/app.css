@@ -2393,3 +2393,7 @@ dialog::backdrop {
     animation: none
   }
 }
+
+.agent-turn { margin-top: 16px; padding: 12px; border: 1px solid #e6ecef; border-radius: 7px; }
+.agent-turn h4 { margin: 0 0 6px; }
+.agent-turn pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }

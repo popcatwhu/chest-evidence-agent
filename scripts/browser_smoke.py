@@ -163,6 +163,19 @@ def main():
                 checks.append(
                     "Real GPU inference, refresh recovery and completed report"
                 )
+                run = requests.get(
+                    args.url + "/api/runs/" + smoke_run, timeout=30
+                ).json()
+                turns = run["result"]["collaboration"]["messages"]
+                assert {m["agent"] for m in turns if m["status"] == "completed"} >= {
+                    "radiology",
+                    "clinical",
+                    "review",
+                    "coordinator",
+                }
+                assert len({m["model"] for m in turns}) >= 3
+                expect(page.locator(".collaboration-box")).to_be_visible()
+                checks.append("Three distinct models and structured agent messages")
             assert not errors, errors
             assert not failures, failures
             browser.close()

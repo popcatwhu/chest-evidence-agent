@@ -7,6 +7,10 @@ from huggingface_hub import HfApi, snapshot_download
 
 ROOT = Path(__file__).resolve().parent.parent
 MODELS = {
+    "review8": (
+        "Qwen/Qwen3-VL-8B-Instruct",
+        "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+    ),
     "7b": (
         "lingshu-medical-mllm/Lingshu-7B",
         "b98aecd41dfd9d7545a6b8e2f4743ae8471bd7a9",

@@ -126,5 +126,7 @@
   ],
   "engine_tests_passed": 69,
   "engine_json_generation_attempts": "Pre-existing maximum2 attempts per structured backend call, raw outputs retained. Evaluators never resubmit a failed terminal case.",
-  "snapshot_exported_at": "2026-10-08T06:35:52.764299+00:00"
+  "protocol": "single-model-reference",
+  "current_team_evaluation": "pending",
+  "snapshot_exported_at": "2026-10-08T07:04:06.125216+00:00"
 }

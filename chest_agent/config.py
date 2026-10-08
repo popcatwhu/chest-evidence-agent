@@ -18,3 +18,10 @@ INFERENCE_PAUSED = os.getenv("CHEST_INFERENCE_PAUSED", "0") == "1"
 
 for directory in (DATA, DATA / "uploads", DATA / "artifacts", DATA / "knowledge"):
     directory.mkdir(parents=True, exist_ok=True)
+
+REVIEW_MODEL = Path(
+    os.getenv(
+        "CHEST_REVIEW_MODEL_PATH", str(ROOT.parent / "models/Qwen3-VL-8B-Instruct")
+    )
+)
+RADIOLOGY_MODEL = Path(os.getenv("CHEST_RADIOLOGY_MODEL_PATH", str(NVREASON_MODEL)))

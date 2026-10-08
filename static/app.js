@@ -29,6 +29,10 @@ const stageNames = {
   prepare: '整理病例',
   facts: '核对事实',
   observe: '观察胸片',
+  radiology_agent: '影像 Agent',
+  clinical_agent: '临床 Agent',
+  review_agent: '独立审查 Agent',
+  coordinator_agent: '协调 Agent',
   radiology: '专用影像工具',
   plan: '分析计划',
   tools: '图像工具',
@@ -154,7 +158,7 @@ async function health() {
     const h = state.health;
     $('health-label').textContent = h.inference_paused ? '推理暂时暂停' : h.model_ready ? '服务已连接' : '模型尚未就绪';
     $('connection-dot').className = 'status-dot ' + (h.inference_paused || !h.model_ready ? 'paused' : 'online');
-    $('model-label').textContent = h.model_name || (h.backend === 'api' ? 'API 模型' : '本地模型');
+    $('model-label').textContent = h.agent_team ? `${new Set(h.agent_team.map(a => a.model)).size} 个模型协作` : h.model_name || '本地模型';
   } catch (_) {
     state.connected = false;
     $('health-label').textContent = '服务连接中断';
@@ -364,6 +368,24 @@ function renderEvidence(evidence) {
   }).join('');
 }
 
+function collaborationPanel(team) {
+  if (!team?.messages?.length) return '';
+  const names = {radiology:'影像 Agent',clinical:'临床 Agent',review:'审查 Agent',coordinator:'协调 Agent'};
+  const turns = team.messages.map((m,i) => {
+    const o = m.output || {};
+    let summary = m.error ? `<p>${esc(m.error)}</p>` : '';
+    if (o.observations) summary += list(o.observations);
+    if (o.most_likely) summary += `<p>候选：${esc(o.most_likely.name)}</p>`;
+    if (o.accepted_challenges) summary += o.accepted_challenges.length ? list(o.accepted_challenges.map(x => `${x.report_quote}：${x.reason}`)) : '<p>本轮未保留有原文依据的质疑。</p>';
+    if (o.unanchored_challenges?.length) summary += list(o.unanchored_challenges);
+    if (o.challenges) summary += list(o.challenges);
+    if (o.revised_report) summary += `<p>修订后候选：${esc(o.revised_report.most_likely.name)}</p>`;
+    if (o.action === 'finalize') summary += `<p>本轮修订 ${esc(o.repairs)} 次，保存结论：${esc(o.conclusion)}</p>${list(o.unresolved_challenges, '未保留待处理的确定性问题')}${o.notes?.length ? list(o.notes) : ''}`;
+    return `<article class="agent-turn"><h4>${i+1}. ${esc(names[m.agent] || m.agent)} <span class="tag ${m.status === 'failed' ? 'red':'neutral'}">${m.status === 'failed' ? '未完成':'已完成'}</span></h4><p class="subtle-text">${esc(m.model)} · ${esc(m.quantization)}</p>${summary}<details><summary>完整协作记录</summary><pre>${esc(JSON.stringify(m,null,2))}</pre></details></article>`;
+  }).join('');
+  return `<details class="facts-box collaboration-box" open><summary>多模型协作记录 · ${new Set(team.agents.map(a => a.model)).size} 个模型</summary><p class="subtle-text">各 Agent 使用独立任务上下文，意见和审查结果仍需依据原始证据核对。</p>${turns}</details>`;
+}
+
 function renderRun(run) {
   if (!run.result?.report) return;
   state.reportRun = run;
@@ -374,7 +396,7 @@ function renderRun(run) {
     metrics = z.metrics || {};
   const assessed = r.assessment || '有限';
   const verifyName = v.status === 'passed_checks' ? '引用与本轮检查通过' : v.status === 'needs_review' ? '仍需复核' : '未执行模型复核';
-  $('report-content').innerHTML = `<div class="report-meta"><span>${esc(date(run.created))} · ${esc(modeNames[run.mode] || run.mode)}</span><div><span class="tag ${assessed === '较充分' ? 'green' : 'amber'}">证据${esc(assessed)}</span>${r.answer_choice ? `<span class="tag neutral">选项 ${esc(r.answer_choice)}</span>` : ''}</div></div>${state.selected && run.context !== state.selected.context ? '<div class="inline-message" style="margin:0 0 15px">这份历史报告使用的资料与当前病例不同，请重新分析以更新判断。</div>' : ''}<article class="primary-diagnosis"><div class="diagnosis-kicker"><span>最可能的候选诊断</span><button id="copy-conclusion" class="icon-button" aria-label="复制候选诊断" title="复制候选诊断">${icon('copy')}</button></div><h2>${esc(primary.name || '未提供候选诊断')}</h2><p class="diagnosis-note">候选判断，需结合确认检查进一步评估</p><div class="claim-heading">支持证据</div>${claims(primary.support,true) || '<p class="subtle-text">未列出支持证据</p>'}${primary.against?.length ? `<div class="claim-heading negative">反对或矛盾证据</div>${claims(primary.against)}` : ''}</article><div class="section-title">鉴别诊断 <small>${(r.differentials || []).length} 个候选</small></div>${(r.differentials || []).map((c,i) => `<article class="differential"><div class="differential-heading"><span>${String(i+1).padStart(2,'0')}</span><h3>${esc(c.name)}</h3></div><div class="claim-heading">支持依据</div>${claims(c.support) || '<p class="subtle-text">未列出支持证据</p>'}${c.against?.length ? `<div class="claim-heading negative">反对或矛盾依据</div>${claims(c.against)}` : ''}</article>`).join('') || '<p class="subtle-text">本次未列出其他候选诊断</p>'}<div class="report-two-columns"><section class="report-block"><h3>需要补充的信息</h3>${list(r.missing_information,'报告未列出缺失信息')}</section><section class="report-block"><h3>进一步评估方向</h3>${r.recommended_checks?.length ? r.recommended_checks.map(c => `<div class="check-item"><strong>${esc(c.name)}</strong><p>${esc(c.purpose)}${refs(c.evidence_ids)}</p></div>`).join('') : list(r.next_checks,'本次未列出进一步检查')}</section></div>${r.findings?.length ? `<div class="section-title">其他观察</div>${claims(r.findings)}` : ''}<div class="change-note"><strong>本次判断变化</strong>${esc(r.change_summary || '首次分析')}</div><details class="review-box" ${v.status === 'needs_review' ? 'open' : ''}><summary>${icon('shield')}证据复核<span class="tag ${v.status === 'needs_review' ? 'amber' : v.status === 'passed_checks' ? 'green' : 'neutral'}">${verifyName}</span></summary>${list([...(v.issues || []),...(v.notes || [])],v.performed ? '本轮未保留待处理检查问题' : '本次未进行模型语义复核')}<p>${esc(v.note || '这些检查不能证明诊断正确。')}</p></details>${z.clinical_contrast?.key_case_clues?.length ? `<details class="facts-box"><summary>诊断中核对的关键病例原文 · ${z.clinical_contrast.key_case_clues.length} 项</summary>${z.clinical_contrast.key_case_clues.map(f => `<div class="fact-row"><strong>${esc(f.name)}</strong>：${esc(f.value)}${refs([f.source_id])}<div class="subtle-text">原文：${esc(f.source_quote)}</div></div>`).join('')}</details>` : ''}${z.profile?.facts?.length ? `<details class="facts-box"><summary>查看已核对的病例事实 · ${z.profile.facts.length} 项</summary>${z.profile.facts.map(f => `<div class="fact-row"><strong>${esc(f.name)}</strong>：${esc(f.value)}${refs([f.source_id])}</div>`).join('')}</details>` : ''}<div class="report-stats"><span>${icon('clock')}耗时 ${esc(metrics.elapsed_seconds ?? '—')} 秒</span><span>模型调用 ${(metrics.model_calls || []).length} 次</span><span>工具调用 ${esc(metrics.tool_calls ?? '—')} 次</span>${z.model ? `<span>${esc(z.model)}</span>` : ''}</div>`;
+  $('report-content').innerHTML = `<div class="report-meta"><span>${esc(date(run.created))} · ${esc(modeNames[run.mode] || run.mode)}</span><div><span class="tag ${assessed === '较充分' ? 'green' : 'amber'}">证据${esc(assessed)}</span>${r.answer_choice ? `<span class="tag neutral">选项 ${esc(r.answer_choice)}</span>` : ''}</div></div>${state.selected && run.context !== state.selected.context ? '<div class="inline-message" style="margin:0 0 15px">这份历史报告使用的资料与当前病例不同，请重新分析以更新判断。</div>' : ''}<article class="primary-diagnosis"><div class="diagnosis-kicker"><span>最可能的候选诊断</span><button id="copy-conclusion" class="icon-button" aria-label="复制候选诊断" title="复制候选诊断">${icon('copy')}</button></div><h2>${esc(primary.name || '未提供候选诊断')}</h2><p class="diagnosis-note">候选判断，需结合确认检查进一步评估</p><div class="claim-heading">支持证据</div>${claims(primary.support,true) || '<p class="subtle-text">未列出支持证据</p>'}${primary.against?.length ? `<div class="claim-heading negative">反对或矛盾证据</div>${claims(primary.against)}` : ''}</article><div class="section-title">鉴别诊断 <small>${(r.differentials || []).length} 个候选</small></div>${(r.differentials || []).map((c,i) => `<article class="differential"><div class="differential-heading"><span>${String(i+1).padStart(2,'0')}</span><h3>${esc(c.name)}</h3></div><div class="claim-heading">支持依据</div>${claims(c.support) || '<p class="subtle-text">未列出支持证据</p>'}${c.against?.length ? `<div class="claim-heading negative">反对或矛盾依据</div>${claims(c.against)}` : ''}</article>`).join('') || '<p class="subtle-text">本次未列出其他候选诊断</p>'}<div class="report-two-columns"><section class="report-block"><h3>需要补充的信息</h3>${list(r.missing_information,'报告未列出缺失信息')}</section><section class="report-block"><h3>进一步评估方向</h3>${r.recommended_checks?.length ? r.recommended_checks.map(c => `<div class="check-item"><strong>${esc(c.name)}</strong><p>${esc(c.purpose)}${refs(c.evidence_ids)}</p></div>`).join('') : list(r.next_checks,'本次未列出进一步检查')}</section></div>${r.findings?.length ? `<div class="section-title">其他观察</div>${claims(r.findings)}` : ''}<div class="change-note"><strong>本次判断变化</strong>${esc(r.change_summary || '首次分析')}</div>${collaborationPanel(z.collaboration)}<details class="review-box" ${v.status === 'needs_review' ? 'open' : ''}><summary>${icon('shield')}证据复核<span class="tag ${v.status === 'needs_review' ? 'amber' : v.status === 'passed_checks' ? 'green' : 'neutral'}">${verifyName}</span></summary>${list([...(v.issues || []),...(v.notes || [])],v.performed ? '本轮未保留待处理检查问题' : '本次未进行模型语义复核')}<p>${esc(v.note || '这些检查不能证明诊断正确。')}</p></details>${z.clinical_contrast?.key_case_clues?.length ? `<details class="facts-box"><summary>诊断中核对的关键病例原文 · ${z.clinical_contrast.key_case_clues.length} 项</summary>${z.clinical_contrast.key_case_clues.map(f => `<div class="fact-row"><strong>${esc(f.name)}</strong>：${esc(f.value)}${refs([f.source_id])}<div class="subtle-text">原文：${esc(f.source_quote)}</div></div>`).join('')}</details>` : ''}${z.profile?.facts?.length ? `<details class="facts-box"><summary>查看已核对的病例事实 · ${z.profile.facts.length} 项</summary>${z.profile.facts.map(f => `<div class="fact-row"><strong>${esc(f.name)}</strong>：${esc(f.value)}${refs([f.source_id])}</div>`).join('')}</details>` : ''}<div class="report-stats"><span>${icon('clock')}耗时 ${esc(metrics.elapsed_seconds ?? '—')} 秒</span><span>模型调用 ${(metrics.model_calls || []).length} 次</span><span>工具调用 ${esc(metrics.tool_calls ?? '—')} 次</span>${z.model ? `<span>${esc(z.model)}</span>` : ''}</div>`;
   renderEvidence(z.evidence || []);
   $('download-report').href = '/api/runs/' + encodeURIComponent(run.id) + '/download';
   $('download-report').classList.remove('hidden');
@@ -602,9 +624,9 @@ async function loadEvaluation() {
       c = d.development;
     $('evaluation-content').innerHTML = `<div class="eval-cards">
       <section class="panel eval-stat"><span>独立公开测试患者</span><h2>${d.test_patients} <small style="font-size:12px;font-weight:400">例</small></h2><p>按患者隔离，测试成绩不参与策略选择</p></section>
-      <section class="panel eval-stat"><span>报告中的选择题结论</span><h2>${Math.round(t.accuracy*100)}%</h2><p>${t.correct}/${t.tasks} 题，失败任务计入分母</p></section>
+      <section class="panel eval-stat"><span>${d.current_team_evaluation === 'pending' ? '参考流程的选择题结论' : '报告中的选择题结论'}</span><h2>${Math.round(t.accuracy*100)}%</h2><p>${t.correct}/${t.tasks} 题，失败任务计入分母</p></section>
       <section class="panel eval-stat"><span>完整报告生成</span><h2>${t.completed}/${t.tasks}</h2><p>模型：${esc(d.model)}</p></section></div>
-      <section class="panel eval-panel"><h2>Agent 完整流程评测</h2><p>结合原始病史与胸片，执行图像工具、医学检索、临床证据对照、报告生成及证据复核。</p><div class="table-scroll"><table class="eval-table"><thead><tr><th>指标</th><th>结果</th></tr></thead><tbody>
+      <section class="panel eval-panel"><h2>${d.current_team_evaluation === 'pending' ? '参考流程测量 · 多模型评测进行中' : '多模型 Agent 评测'}</h2><p>结合原始病史与胸片，执行图像工具、医学检索、临床证据对照、报告生成及证据复核。</p><div class="table-scroll"><table class="eval-table"><thead><tr><th>指标</th><th>结果</th></tr></thead><tbody>
       <tr><td>报告耗时中位数</td><td>${q.median_report_seconds} 秒</td></tr>
       <tr><td>GPU峰值保留显存</td><td>${q.gpu_peak_reserved_gib} GiB</td></tr>
       <tr><td>保留可用临床证据对照</td><td>${q.usable_contrasts}/${t.tasks}</td></tr>
@@ -612,7 +634,7 @@ async function loadEvaluation() {
       <tr><td>保留原文线索</td><td>${q.literal_clues_retained} 条</td></tr>
       </tbody></table></div><div class="eval-detail">待复核标记包含未完成的模型复核或证据对照、引用不匹配等问题，不能直接等同于临床错误数。</div>
       <div class="eval-footer"><span>快照导出：${esc(date(d.snapshot_exported_at))}</span><a href="/static/evaluation.json" download="agent-evaluation.json">下载评测汇总 ↓</a></div></section>
-      <div class="eval-notes"><section class="panel eval-note"><h3>分数的含义</h3><p>这些分数衡量公开问题在完整报告中的选项结论，不代表临床诊断准确率。公开数据预训练污染情况未知，尚未经临床专家评分；引用检查通过也不能证明医学正确。</p></section>
+      <div class="eval-notes"><section class="panel eval-note"><h3>分数的含义</h3><p>${d.current_team_evaluation === 'pending' ? '下列分数来自此前单主模型流程，当前多模型协作尚未完成独立评测。' : '这些分数衡量公开问题在完整报告中的选项结论，不代表临床诊断准确率。'}公开数据预训练污染情况未知，尚未经临床专家评分；引用检查通过也不能证明医学正确。</p></section>
       <section class="panel eval-note"><h3>开发验证与局限</h3><p>${c.inputs}组已知开发输入来自${c.patients}位患者，具体候选诊断名称符合参考结局的为${c.specific_matches}位，疾病大类为${c.broad_matches}位。这些是开发验证，不能作为独立准确率。结核仍误判，张力性气胸仍只识别到大类。</p></section></div>`;
   } catch (e) {
     $('evaluation-content').innerHTML = `<div class="panel simple-empty">评测记录读取失败：${esc(e.message)}<br><button class="text-button" id="retry-evaluation">重新读取</button></div>`;

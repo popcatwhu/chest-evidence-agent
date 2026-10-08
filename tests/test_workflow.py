@@ -7,6 +7,14 @@ from chest_agent.clinical_contrast import ClinicalContrast
 @pytest.fixture(autouse=True)
 def no_external_models_in_workflow_unit_tests(monkeypatch):
     monkeypatch.setattr(config, "CXR_EXPERT_ENABLED", False)
+    for agent in (workflow.agents.radiologist, workflow.agents.reviewer):
+        monkeypatch.setattr(
+            agent,
+            "run",
+            lambda prompt, schema, image=None, **kw: workflow.backend.json(
+                prompt, schema, image, **kw
+            ),
+        )
 
 
 def make_report(ref):

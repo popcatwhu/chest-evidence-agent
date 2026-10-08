@@ -9,7 +9,8 @@ They are not included in this repository.
 - [Lingshu](https://huggingface.co/lingshu-medical-mllm/Lingshu-32B): main medical vision-language model. Consult the official model card and license before using or distributing weights.
 - [TorchXRayVision](https://github.com/mlmed/torchxrayvision): classification and anatomical segmentation tools and their checkpoints.
 - [IAMJB CXR baseline](https://huggingface.co/IAMJB/chexpert-mimic-cxr-findings-baseline): model-generated auxiliary observations.
-- [NV-Reason-CXR-3B](https://huggingface.co/nvidia/NV-Reason-CXR-3B): experimental comparison only; not the default reader. Weights use the NVIDIA OneWay Noncommercial license.
+- [Qwen3-VL-8B-Instruct](https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct): independent evidence-review agent.
+- [NV-Reason-CXR-3B](https://huggingface.co/nvidia/NV-Reason-CXR-3B): radiology agent model; research use only. Weights use the NVIDIA OneWay Noncommercial license.
 - [MedlinePlus](https://medlineplus.gov/), [NIH ClinicalInfo](https://clinicalinfo.hiv.gov/) and linked professional references: retrieval sources. Source URLs and source types are retained by the preparation scripts.
 
 Public evaluation summaries contain aggregate measurements and limited public-case

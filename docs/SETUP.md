@@ -10,14 +10,15 @@
 
 ```bash
 python scripts/download_model_ranges.py 7b
-hf download IAMJB/chexpert-mimic-cxr-findings-baseline --local-dir ../models/CXR-Findings
+python scripts/download_model_ranges.py cxr3b
+python scripts/download_model_ranges.py review8
 git clone https://github.com/bowang-lab/MedRAX.git ../MedRAX
 python scripts/prepare_data.py
 python scripts/expand_knowledge.py
 CHEST_MODEL_PATH="$PWD/../models/Lingshu-7B" bash scripts/start.sh
 ```
 
-下载脚本固定模型版本，并核对权重的 LFS SHA256。TorchXRayVision 的分类和分割权重按需下载。
+多模型流程还需 NV-Reason-CXR-3B 与 Qwen3-VL-8B-Instruct；7B 命令仅将临床主模型替换成较小版本。下载脚本固定模型版本，并核对权重的 LFS SHA256。TorchXRayVision 的分类和分割权重按需下载。
 
 `prepare_data.py` 使用人工病史和独立样例胸片构建演示病例，只用于检查流程。MedRAX 元数据及原始图片需单独下载，见 [上游仓库](https://github.com/bowang-lab/MedRAX)。医学资料保留来源 URL，当前检索库规模较小。
 
@@ -29,6 +30,8 @@ python scripts/quantize_local_model.py \
   --source ../models/Lingshu-32B --output ../models/Lingshu-32B-NF4
 bash scripts/start.sh
 ```
+
+Qwen 审查模型在加载时量化为 NF4，影像模型保持 BF16。辅助模型串行使用同一个显存槽，避免三份权重同时常驻。
 
 转换使用 NF4 双重量化和 BF16 计算，视觉模块与 lm_head 保持原精度。首次从机械盘加载可能耗时数分钟。
 
@@ -60,8 +63,8 @@ CHEST_HOST=0.0.0.0 CHEST_PORT=7860 bash scripts/start.sh
 | `CHEST_MODEL_PATH` | `../models/Lingshu-32B-NF4` | 模型目录 |
 | `CHEST_HOST` / `CHEST_PORT` | `127.0.0.1` / `7860` | 监听地址和端口 |
 | `CHEST_BACKEND` | `local` | `local` 或 `api` |
-| `CHEST_CXR_EXPERT` | `1` | 专用胸片观察 |
-| `CHEST_CXR_READER` | `iamjb` | `iamjb` 或实验模型 `nvreason` |
+| `CHEST_RADIOLOGY_MODEL_PATH` | `../models/NV-Reason-CXR-3B` | 影像 Agent 模型 |
+| `CHEST_REVIEW_MODEL_PATH` | `../models/Qwen3-VL-8B-Instruct` | 审查 Agent 模型 |
 | `CHEST_RECHECK_IMAGE` | `1` | 诊断及复核阶段接收原图 |
 | `CHEST_CONSTRAINED_JSON` | `1` | 本地 JSON Schema 解码约束 |
 | `CHEST_MAX_INPUT_TOKENS` | `8192` | 输入 token 上限 |

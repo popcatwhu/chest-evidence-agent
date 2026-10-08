@@ -8,6 +8,17 @@ from chest_agent.schemas import CaseProfile, Observation, Plan, Report, Review
 from chest_agent import clinical_contrast as contrast, workflow as wf
 
 
+@pytest.fixture(autouse=True)
+def stub_review_model(monkeypatch):
+    monkeypatch.setattr(
+        wf.agents.reviewer,
+        "run",
+        lambda prompt, schema, image=None, **kw: wf.backend.json(
+            prompt, schema, image, **kw
+        ),
+    )
+
+
 def report():
     return Report.model_validate(
         {

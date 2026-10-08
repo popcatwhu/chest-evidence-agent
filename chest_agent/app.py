@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from PIL import Image
-from . import store, config
+from . import store, config, agents
 from .llm import backend
 from .workflow import execute
 
@@ -41,6 +41,10 @@ def health():
         "model_ready": backend.ready() and not config.INFERENCE_PAUSED,
         "cxr_reader": config.CXR_READER,
         "clinical_contrast": True,
+        "agent_team": agents.roster(),
+        "team_models_ready": all(
+            a.model.ready() for a in (agents.radiologist, agents.reviewer)
+        ),
         "inference_paused": config.INFERENCE_PAUSED,
         "load_nf4": config.LOAD_NF4,
         "recheck_original_image": config.RECHECK_IMAGE,
