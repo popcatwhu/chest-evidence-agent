@@ -1,0 +1,116 @@
+{
+  "protocol": "heterogeneous-review-v1",
+  "current_team_evaluation": "complete",
+  "model": "NV-Reason-CXR-3B / Lingshu-32B-NF4 / Qwen3-VL-8B-Instruct",
+  "models_by_agent": {
+    "radiology": "NV-Reason-CXR-3B",
+    "clinical": "Lingshu-32B-NF4",
+    "review": "Qwen3-VL-8B-Instruct",
+    "coordinator": "Lingshu-32B-NF4"
+  },
+  "agent_models": [
+    {
+      "agent": "radiology",
+      "model": "NV-Reason-CXR-3B",
+      "backend": "local",
+      "quantization": "BF16",
+      "source_revision": {
+        "repository": "nvidia/NV-Reason-CXR-3B",
+        "revision": "056bd0383b35226554da9dc5866e095df174ae19"
+      }
+    },
+    {
+      "agent": "clinical",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    },
+    {
+      "agent": "review",
+      "model": "Qwen3-VL-8B-Instruct",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "Qwen/Qwen3-VL-8B-Instruct",
+        "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+        "weights_verified": "LFS SHA256"
+      }
+    },
+    {
+      "agent": "coordinator",
+      "model": "Lingshu-32B-NF4",
+      "backend": "local",
+      "quantization": "NF4",
+      "source_revision": {
+        "repository": "lingshu-medical-mllm/Lingshu-32B",
+        "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+        "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+      }
+    }
+  ],
+  "mode": "verified",
+  "test_patients": 20,
+  "test": {
+    "tasks": 20,
+    "completed": 20,
+    "correct": 15,
+    "accuracy": 0.75,
+    "wilson_95_ci": [
+      0.5313,
+      0.8881
+    ],
+    "invalid_or_missing_choices": 0
+  },
+  "report_quality": {
+    "tasks": 20,
+    "completed": 20,
+    "failed_or_interrupted": 0,
+    "terminal_errors": [],
+    "deterministic_report_issues": 1,
+    "needs_review_reports": 16,
+    "median_report_seconds": 63.94,
+    "gpu_peak_reserved_gib": 28.14,
+    "usable_contrasts": 6,
+    "literal_clues_retained": 9,
+    "quoted_observation_conflicts": 0
+  },
+  "collaboration": {
+    "complete_teams": 19,
+    "agents": {
+      "radiology": {
+        "completed": 19,
+        "failed": 1
+      },
+      "clinical": {
+        "completed": 20,
+        "failed": 0
+      },
+      "review": {
+        "completed": 20,
+        "failed": 0
+      },
+      "coordinator": {
+        "completed": 20,
+        "failed": 0
+      }
+    }
+  },
+  "development": null,
+  "test_manifest_sha256": "fb19055a8a2958e922afdac52e46d4f163734ae0e31631e7d84e24451beb612d",
+  "pipeline_sha256": "bef4b6250fa24383c93c4e08b098c1813f574078d32570672a9b43d747189e70",
+  "test_outcomes_used_for_selection": false,
+  "clinical_accuracy_validated": false,
+  "limitations": [
+    "Twenty public diagnostic MCQs within full reports; not clinical expert grading.",
+    "Public pretraining contamination unknown.",
+    "Independent model review and citation validity do not prove medical correctness.",
+    "Serial auxiliary model loading is included in report latency."
+  ],
+  "evaluated_commit": "cfa869703674aab7e0316eece79bf5d98bdab1e5",
+  "engine_tests_passed": 77
+}

@@ -157,3 +157,16 @@ def download(run_id: str):
         run,
         headers={"Content-Disposition": f'attachment; filename="report-{run_id}.json"'},
     )
+
+
+@app.get("/api/evaluation/progress")
+def evaluation_progress():
+    import json
+
+    path = config.DATA / "evaluation_progress.json"
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text())
+    except json.JSONDecodeError:
+        return None

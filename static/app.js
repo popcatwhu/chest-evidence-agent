@@ -617,13 +617,15 @@ function renderConnection() {
 }
 async function loadEvaluation() {
   try {
-    if (!state.evaluation) state.evaluation = await api('/static/evaluation.json');
+    state.evaluation = await api('/static/evaluation.json');
+    const progress = await api('/api/evaluation/progress').catch(() => null);
     const d = state.evaluation,
       t = d.test,
       q = d.report_quality,
       c = d.development;
     const developmentNote = c ? `${c.inputs}组已知开发输入来自${c.patients}位患者，具体候选诊断名称符合参考结局的为${c.specific_matches}位，疾病大类为${c.broad_matches}位。这些是开发验证，不能作为独立准确率。` : '当前多模型流程已完成真实模型联通检查，诊断得分以独立测试为准。仍需临床专家评估报告的解释、鉴别依据和检查建议。';
-    $('evaluation-content').innerHTML = `<div class="eval-cards">
+    const progressPanel = progress && progress.state !== 'complete' ? `<section class="panel eval-panel"><h2>扩展独立评测 · ${esc(progress.completed)}/${esc(progress.total)}</h2><p>${progress.state === 'running' ? '评测进行中；模型与流程保持冻结。下方展示已完成批次的正式结果。' : '评测已中断，保留断点等待继续。'}${progress.error ? ' '+esc(progress.error) : ''}</p></section>` : '';
+    $('evaluation-content').innerHTML = `${progressPanel}<div class="eval-cards">
       <section class="panel eval-stat"><span>独立公开测试患者</span><h2>${d.test_patients} <small style="font-size:12px;font-weight:400">例</small></h2><p>按患者隔离，测试成绩不参与策略选择</p></section>
       <section class="panel eval-stat"><span>${d.current_team_evaluation === 'pending' ? '参考流程的选择题结论' : '报告中的选择题结论'}</span><h2>${Math.round(t.accuracy*100)}%</h2><p>${t.correct}/${t.tasks} 题，失败任务计入分母</p></section>
       <section class="panel eval-stat"><span>完整报告生成</span><h2>${t.completed}/${t.tasks}</h2><p>模型：${esc(d.model)}</p></section></div>
@@ -788,3 +790,7 @@ async function init() {
 }
 init();
 setInterval(health, 15000);
+
+setInterval(() => {
+  if (!$('evaluation-view').classList.contains('hidden')) loadEvaluation();
+}, 15000);

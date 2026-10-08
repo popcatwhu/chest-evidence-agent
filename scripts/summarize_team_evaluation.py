@@ -68,7 +68,7 @@ def summarize(manifest, results):
         "test_outcomes_used_for_selection": False,
         "clinical_accuracy_validated": False,
         "limitations": [
-            "Twenty public diagnostic MCQs within full reports; not clinical expert grading.",
+            f"{len(records)} public diagnostic MCQs within full reports; not clinical expert grading.",
             "Public pretraining contamination unknown.",
             "Independent model review and citation validity do not prove medical correctness.",
             "Serial auxiliary model loading is included in report latency.",

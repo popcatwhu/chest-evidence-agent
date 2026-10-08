@@ -62,7 +62,7 @@ docs/         安装、设计和评测说明
 
 ## 评测
 
-20位未使用过的公开测试患者，结果如下：
+首批20位公开测试患者的结果如下（[批次记录](evals/batches/test20-summary.json)）：
 
 | 指标 | 结果 |
 | --- | --- |
@@ -77,7 +77,9 @@ docs/         安装、设计和评测说明
 
 项目用于研究和演示，未经临床验证。模型意见和引用有效性不能证明医学正确。
 
-[评测方法](docs/EVALUATION.md) · [结果](evals/summary.json) · [运行环境](evals/environment.json)
+当前扩展集合包含60位全新患者，排除此前使用的128位患者，继续使用相同模型与推理流程。评测页展示运行进度，完成审计后更新正式结果。
+
+[评测方法](docs/EVALUATION.md) · [最新已完成结果](evals/summary.json) · [运行环境](evals/environment.json)
 
 ## 开发
 

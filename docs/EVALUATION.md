@@ -6,7 +6,7 @@ NV-Reason 影像 Agent 独立描述原图；Lingshu 临床 Agent 结合病史、
 
 ## 测试集合
 
-按患者隔离抽取20位公开患者，每位使用一张胸片和一道诊断选择题。排除108位此前使用过的患者，模型和流程在读取测试成绩前固定。抽样种子、病例编号和元数据指纹见 [evals/sample.json](../evals/sample.json)。
+本轮使用60位尚未使用过的公开患者，每位使用一张胸片和一道诊断选择题。排除128位此前使用过的患者，模型和流程在读取测试成绩前固定。抽样种子、病例编号和元数据指纹见 [evals/sample.json](../evals/sample.json)。
 
 模型输入只包含病史、匹配的胸片和公开问题。参考答案、图注、最终诊断和解释仅保存在评测器侧。失败任务仍计入分母，不重新提交已经失败的病例来替换结果。
 
@@ -18,10 +18,8 @@ NV-Reason 影像 Agent 独立描述原图；Lingshu 临床 Agent 结合病史、
 
 ```bash
 python scripts/prepare_benchmark.py --limit 5
-python scripts/prepare_independent_benchmark.py --limit 20 --seed 20261008 --exclude-manifest evals/sample.json --output-dir data/team/test20
-python scripts/evaluate_full_reports.py --manifest data/team/test20/manifest.json --modes verified --output data/team/test20_results.json
-python scripts/summarize_team_evaluation.py --manifest data/team/test20/manifest.json --results data/team/test20_results.json
-python scripts/export_frontend_evaluation.py
+python scripts/prepare_independent_benchmark.py --limit 60 --seed 20261009 --exclude-manifest evals/sample.json --output-dir data/team60/test60
+python scripts/run_expanded_evaluation.py --manifest data/team60/test60/manifest.json --results data/team60/test60_results.json
 ```
 
 汇总脚本检查任务完整性、输入指纹、病史、问题、原图像素、选项评分及实际模型身份。报告中的 `collaboration` 保存意见、质疑和协调记录。汇总输出位于 [evals/summary.json](../evals/summary.json)。
@@ -32,8 +30,10 @@ python scripts/export_frontend_evaluation.py
 
 `direct` 和 `tools` 仅供消融实验，工作台使用 `verified` 完整流程。不同任务、样本和输入协议的分数不合并。
 
-## 本轮结果
+## 首批20例记录
 
 20例报告均完成，选择题结论答对15例。所有专业 Agent 完整参与的为19例；1例影像 Agent 的结构化输出未完成，保留为失败观察，没有重新提交病例替换结果。报告耗时中位数63.94秒，GPU峰值保留显存28.14 GiB。
 
 16份报告仍需复核；这些标记包括临床对照不足、无法锚定的模型质疑和辅助 Agent 未完成等情况。它们不等同于16例临床诊断错误。具体医疗解释与检查建议尚未进行专家评分。
+
+扩展评测支持断点续跑，同一结果目录只能运行一个进程。完成后自动审计并更新网页；中断时保留任务和进度。首批20例单独保留于 `evals/batches/`，两批病例没有重叠。
