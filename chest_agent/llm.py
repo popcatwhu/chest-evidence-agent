@@ -248,11 +248,16 @@ class ModelBackend:
                             self.enforcer_tokenizer_data, json_schema
                         )
                     )
+                from transformers import StoppingCriteriaList
+                from .generation import RepetitionStop
+
+                repetition_stop = RepetitionStop(inputs.input_ids.shape[1])
                 with torch.inference_mode():
                     generated = self.model.generate(
                         **inputs,
                         max_new_tokens=max_tokens,
                         do_sample=False,
+                        stopping_criteria=StoppingCriteriaList([repetition_stop]),
                         **generation_options,
                     )
                 trimmed = generated[:, inputs.input_ids.shape[1] :]
@@ -272,6 +277,9 @@ class ModelBackend:
             )
             if self.backend_type != "api":
                 metric["input_tokens"] = input_tokens
+            if self.backend_type != "api":
+                metric["repetition_stopped"] = repetition_stop.triggered
+                metric["output_budget_reached"] = tokens >= max_tokens
             self.metrics.append(metric)
             return output
 
@@ -402,6 +410,13 @@ class ModelBackend:
             prompt + "\n只输出结果JSON，不要输出JSON Schema或properties、$defs。"
             "以下仅为字段结构示例，所有占位内容必须替换为本次结果。\n" + specification
         )
+        if is_report:
+            instructions += (
+                "\n诊断name只写疾病名称，最多120字符，不能包含证据编号或方括号。"
+                "引用只放在evidence_ids中，每条最多4个编号，不在名称中重复引用。"
+                "每条依据不超过400字符，用短句说明。"
+            )
+        initial_instructions = instructions
         trace_dir = config.DATA / "traces"
         trace_dir.mkdir(exist_ok=True)
         for attempt in range(2):
@@ -419,6 +434,8 @@ class ModelBackend:
                 )
             )
             try:
+                if self.metrics and self.metrics[-1].get("repetition_stopped"):
+                    raise ValueError("检测到重复输出循环，本次结果未完成")
                 payload = parse_json(raw, schema.model_fields.keys())
                 if is_report and isinstance(payload.get("next_checks"), list):
                     structured = [
@@ -454,9 +471,20 @@ class ModelBackend:
             except ValueError as error:
                 if attempt:
                     raise
-                instructions += (
-                    "\n上次输出格式错误，请修正以下结果JSON。没有支持证据的鉴别诊断请移除，不能编造证据。"
-                    "\n错误：" + str(error)[:600] + "\n上次结果：" + raw[:10000]
+                # Start again from original evidence; never feed a looping partial
+                # answer back as working memory or complete it by inventing values.
+                retry = (
+                    "\n上次输出未完成或结构无效。请从原始证据重新生成简短完整JSON，"
+                    "不能续写上次输出，只使用当前字段结构，不补造事实或引用。"
+                )
+                if is_report:
+                    retry += (
+                        "诊断名称只写疾病，引用只写在evidence_ids。"
+                        "最多保留一个有依据的鉴别项，每项只写最关键依据，"
+                        "无实际依据的列表留空。"
+                    )
+                instructions = (
+                    initial_instructions + retry + "\n错误类型：" + type(error).__name__
                 )
 
 

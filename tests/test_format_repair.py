@@ -3,7 +3,7 @@ from chest_agent.schemas import Review
 from chest_agent import config
 
 
-def test_format_retry_includes_bad_output_and_does_not_accept_schema(
+def test_format_retry_restarts_from_task_without_echoing_invalid_output(
     tmp_path, monkeypatch
 ):
     monkeypatch.setattr(config, "DATA", tmp_path)
@@ -23,7 +23,9 @@ def test_format_retry_includes_bad_output_and_does_not_accept_schema(
     monkeypatch.setattr(model, "generate", generate)
     review = model.json("复核报告", Review)
     assert review.issues[0].reason == "具体证据问题"
-    assert '"properties"' in prompts[1]
+    assert '"properties"' not in prompts[1]
+    assert "复核报告" in prompts[1]
+    assert "从原始证据重新生成" in prompts[1]
     assert len(list((tmp_path / "traces").glob("*.json"))) == 2
 
 

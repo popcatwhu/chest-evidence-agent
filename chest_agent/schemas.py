@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
 import re
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class StrictModel(BaseModel):
@@ -42,21 +42,32 @@ class Observation(StrictModel):
     limitations: list[str]
 
 
+EvidenceID = Annotated[str, Field(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
+ShortText = Annotated[str, Field(min_length=1, max_length=200)]
+
+
 class Claim(StrictModel):
-    text: str = Field(min_length=1)
-    evidence_ids: list[str] = Field(min_length=1)
+    text: str = Field(min_length=1, max_length=400)
+    evidence_ids: list[EvidenceID] = Field(min_length=1, max_length=4)
 
 
 class Candidate(StrictModel):
-    name: str = Field(min_length=1)
-    support: list[Claim] = Field(min_length=1)
-    against: list[Claim] = Field(default_factory=list)
+    name: str = Field(min_length=1, max_length=120)
+    support: list[Claim] = Field(min_length=1, max_length=4)
+    against: list[Claim] = Field(default_factory=list, max_length=3)
+
+    @field_validator("name")
+    @classmethod
+    def name_has_no_citations(cls, value):
+        if re.search(r"[\[\]\r\n]", value):
+            raise ValueError("诊断名称不能包含证据引用或换行，引用应放在evidence_ids")
+        return value
 
 
 class RecommendedCheck(StrictModel):
-    name: str = Field(min_length=1)
-    purpose: str = Field(min_length=1)
-    evidence_ids: list[str] = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=120)
+    purpose: str = Field(min_length=1, max_length=300)
+    evidence_ids: list[EvidenceID] = Field(min_length=1, max_length=4)
 
 
 ChoiceLetter = Literal["A", "B", "C", "D", "E", "F"]
@@ -68,13 +79,13 @@ class Report(StrictModel):
     assessment: Literal["有限", "较充分", "存在冲突"] = "有限"
     most_likely: Candidate
     differentials: list[Candidate] = Field(default_factory=list, max_length=2)
-    findings: list[Claim] = Field(default_factory=list)
-    missing_information: list[str] = Field(default_factory=list)
-    next_checks: list[str] = Field(default_factory=list)
+    findings: list[Claim] = Field(default_factory=list, max_length=6)
+    missing_information: list[ShortText] = Field(default_factory=list, max_length=6)
+    next_checks: list[ShortText] = Field(default_factory=list, max_length=8)
     recommended_checks: list[RecommendedCheck] = Field(
         default_factory=list, max_length=8
     )
-    change_summary: str = "首次分析"
+    change_summary: str = Field(default="首次分析", max_length=300)
 
 
 class ChoiceReport(Report):

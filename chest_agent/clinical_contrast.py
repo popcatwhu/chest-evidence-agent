@@ -10,6 +10,7 @@ from chest_agent.schemas import (
     CaseProfile,
     Report,
     validate_evidence,
+    EvidenceID,
 )
 from chest_agent.quality import ground_facts, normalized
 from chest_agent.diagnosis_checks import canonical_name
@@ -23,7 +24,7 @@ class ConciseFact(Fact):
 
 class ConciseClaim(Claim):
     text: str = Field(min_length=1, max_length=240)
-    evidence_ids: list[str] = Field(min_length=1, max_length=3)
+    evidence_ids: list[EvidenceID] = Field(min_length=1, max_length=3)
 
 
 class Hypothesis(StrictModel):

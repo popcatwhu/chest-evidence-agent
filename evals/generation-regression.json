@@ -1,0 +1,39 @@
+{
+  "date": "2026-10-11",
+  "type": "known-failure engineering regression",
+  "public_case_id": "14547",
+  "same_history_question_and_image_pixels": true,
+  "report_completed": true,
+  "clinical_report_tokens": 226,
+  "output_budget": 1800,
+  "generation_repetition_stopped": false,
+  "agent_turns": [
+    {
+      "agent": "radiology",
+      "model": "NV-Reason-CXR-3B",
+      "status": "completed"
+    },
+    {
+      "agent": "clinical",
+      "model": "Lingshu-32B-NF4",
+      "status": "completed"
+    },
+    {
+      "agent": "review",
+      "model": "Qwen3-VL-8B-Instruct",
+      "status": "completed"
+    },
+    {
+      "agent": "coordinator",
+      "model": "Lingshu-32B-NF4",
+      "status": "completed"
+    }
+  ],
+  "elapsed_seconds": 67.37,
+  "original_loop_replay_stop_tokens": 224,
+  "unit_tests_passed": 84,
+  "limitations": [
+    "Known failure used for debugging, not an independent diagnostic accuracy measurement.",
+    "Frozen 60-patient results remain unchanged."
+  ]
+}
