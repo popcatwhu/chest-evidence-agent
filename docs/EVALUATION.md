@@ -37,6 +37,7 @@ python scripts/run_expanded_evaluation.py --manifest data/team60/test60/manifest
 [图片审核](../evals/medxpert-intake.json)与[划分记录](../evals/medxpert-splits.json)公开编号和指纹，原图及带答案的清单位于本地 `data/medxpert/`。固定源文件为 `MM/test.jsonl` 和 `images.zip`，版本见划分记录；这些是原数据测试题的本地开发/保留划分，不沿用原数据的dev/test命名。
 
 ```bash
+python -m scripts.download_medxpert
 python -m scripts.prepare_medxpert
 python -m scripts.add_differential_sources
 python -m scripts.evaluate_corrections

@@ -22,7 +22,7 @@ def write(path, value):
     temporary.replace(path)
 
 
-def evaluate(manifest_path, output, base, allow_holdout=False):
+def evaluate(manifest_path, output, base, allow_holdout=False, mode="verified"):
     manifest = json.loads(manifest_path.read_text())
     if manifest.get("split") == "holdout" and not allow_holdout:
         raise ValueError(
@@ -53,7 +53,7 @@ def evaluate(manifest_path, output, base, allow_holdout=False):
             subprocess.check_output(["git", "diff", "HEAD"], cwd=ROOT)
         ).hexdigest(),
         "split": manifest.get("split"),
-        "mode": "verified",
+        "mode": mode,
         "health": health,
         "pipeline_source_sha256": pipeline_hash,
         "corpus_sha256": corpus_hash(),
@@ -110,7 +110,7 @@ def evaluate(manifest_path, output, base, allow_holdout=False):
             case_id = response.json()["id"]
             response = requests.post(
                 base + f"/api/cases/{case_id}/runs",
-                json={"question": example["question"], "mode": "verified"},
+                json={"question": example["question"], "mode": mode},
                 timeout=30,
             )
             response.raise_for_status()
@@ -181,8 +181,13 @@ if __name__ == "__main__":
     )
     parser.add_argument("--base", default="http://127.0.0.1:7860")
     parser.add_argument("--evaluate-holdout", action="store_true")
+    parser.add_argument(
+        "--mode", choices=["direct", "tools", "verified"], default="verified"
+    )
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.with_suffix(".lock").open("w") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        evaluate(args.manifest, args.output, args.base, args.evaluate_holdout)
+        evaluate(
+            args.manifest, args.output, args.base, args.evaluate_holdout, args.mode
+        )
