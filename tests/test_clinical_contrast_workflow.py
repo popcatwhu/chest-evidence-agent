@@ -79,7 +79,8 @@ def test_enabled_contrast_reaches_report_and_is_saved(tmp_path, monkeypatch):
     assert run["status"] == "completed"
     assert run["result"]["clinical_contrast_enabled"]
     assert len(run["result"]["clinical_contrast"]["hypotheses"]) == 2
-    assert "不是新增患者事实" in prompts[0]
+    assert "候选B" not in prompts[0]
+    assert "reported fever" in prompts[0]
     assert run["result"]["verification"]["status"] == "passed_checks"
 
 

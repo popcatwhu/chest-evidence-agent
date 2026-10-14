@@ -296,6 +296,7 @@ class ModelBackend:
                 "preferred_choice": None,
                 "reason": "患者证据如何支持或反驳两个候选，缺少哪些决定性依据",
                 "evidence_ids": ["C-1"],
+                "criterion_source_id": None,
             },
             "SelectedCaseProfile": {
                 "facts": [{"name": "检查或病史项目", "source_id": "C-1-S1-1"}]

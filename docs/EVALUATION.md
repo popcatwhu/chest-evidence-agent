@@ -41,9 +41,15 @@ python -m scripts.download_medxpert
 python -m scripts.prepare_medxpert
 python -m scripts.add_differential_sources
 python -m scripts.evaluate_corrections
+python -m scripts.evaluate_corrections --mode direct --output data/correction/direct12/results.json
+python -m scripts.export_correction_evaluation
 ```
 
 评测比较同一次完整流程中临床草稿与最终报告，分别记录错误草稿纠正率、正确草稿误改率和最终选项准确率。缺失草稿单独统计，不当作有效诊断错误；最终失败计入错误。它衡量后续审查与裁决的增量，不等同于与单模型独立调用的完整消融。保留集默认禁止运行，固定流程后才使用 `--evaluate-holdout`；其成绩不会与60例ChestAgentBench成绩合并。
+
+初版12题开发结果对应代码 `2f90726`：初稿4题正确，最终3题正确，没有纠错且误改1题。匹配的直接报告对照答对5题。来源、模型、知识库和运行代码指纹随结果保存；公开汇总不含患者图像和原始病例正文。
+
+后续修正让临床初稿仅接收原始输入，并要求改变结论的裁决引用专业医学判据。两题针对性回归用于验证防止误改及输入干扰，不替换初版开发成绩。修正版本尚未在12题全量或24题保留集上测量。
 
 ## 首批20例记录
 

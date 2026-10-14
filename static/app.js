@@ -387,10 +387,12 @@ function collaborationPanel(team) {
     if (o.unanchored_challenges?.length) summary += list(o.unanchored_challenges);
     if (o.challenges) summary += list(o.challenges);
     if (o.revised_report) summary += `<p>修订后候选：${esc(o.revised_report.most_likely.name)}</p>`;
+    if (o.decision?.criterion) summary += `<p>判据：${esc(o.decision.criterion.text)} · ${esc(o.decision.criterion.evidence_id)}</p>`;
+    if (o.unsupported_change_rejected) summary += '<p>本次修订缺少诊断变更依据，已保留临床初稿。</p>';
     if (o.action === 'finalize') summary += `<p>本轮修订 ${esc(o.repairs)} 次，保存结论：${esc(o.conclusion)}</p>${list(o.unresolved_challenges, '未保留待处理的确定性问题')}${o.notes?.length ? list(o.notes) : ''}`;
     return `<article class="agent-turn"><h4>${i+1}. ${esc(names[m.agent] || m.agent)} <span class="tag ${m.status === 'failed' ? 'red':'neutral'}">${m.status === 'failed' ? '未完成':'已完成'}</span></h4><p class="subtle-text">${esc(m.model)} · ${esc(m.quantization)}</p>${summary}<details><summary>完整协作记录</summary><pre>${esc(JSON.stringify(m,null,2))}</pre></details></article>`;
   }).join('');
-  return `<details class="facts-box collaboration-box" open><summary>多模型协作记录 · ${new Set(team.agents.map(a => a.model)).size} 个模型</summary><p class="subtle-text">各 Agent 使用独立任务上下文，意见和审查结果仍需依据原始证据核对。</p>${turns}</details>`;
+  return `<details class="facts-box collaboration-box" open><summary>多模型协作记录 · ${new Set(team.messages.map(m => m.model)).size} 个模型</summary><p class="subtle-text">各 Agent 使用独立任务上下文，意见和审查结果仍需依据原始证据核对。</p>${turns}</details>`;
 }
 
 function renderRun(run) {

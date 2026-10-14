@@ -16,7 +16,7 @@
 | Agent | 模型 | 职责 |
 | --- | --- | --- |
 | 影像 | NV-Reason-CXR-3B，BF16 | 独立观察胸片，不接收临床结论 |
-| 临床 | Lingshu-32B，NF4 | 结合病史、原图与工具证据形成候选诊断 |
+| 临床 | Lingshu-32B，NF4 | 根据原始病史与胸片独立形成初稿，不接收其他模型意见 |
 | 审查 | Qwen3-VL-8B-Instruct，NF4 | 先根据病史与原图独立判断，再对照报告及原始证据 |
 | 协调 | Lingshu-32B，NF4 | 检索分歧依据、裁决及修订报告，保存未解决问题 |
 
@@ -45,13 +45,15 @@ bash scripts/start.sh
 ## 实现
 
 ```text
-病史 / 胸片 → NV 影像 Agent → 工具与检索 → Lingshu 临床 Agent
+病史 / 胸片 → 独立影像观察、临床初稿、工具与检索
           → Qwen 独立判断 → 分歧检索与裁决（按需）→ Qwen 对照审查 → 协调修订
 ```
 
 LangGraph 管理流程，Pydantic 校验结构化输出。推理任务串行执行，SQLite 保存输入快照、报告和事件。前端使用 HTML、CSS 和 JavaScript；检索采用字符 TF-IDF。
 
 独立判断不接收临床报告、计划、检索结果或其他模型的观察。意见不同会记录分歧；只有能定位原始证据的质疑才触发修订。
+
+临床初稿同样只接收原始输入。协调模型改诊断必须引用患者证据和可定位的专业医学判据；仅修改引用或检查建议时，不允许顺带改变结论。
 
 ```text
 chest_agent/   后端、模型调用和诊断流程
@@ -83,9 +85,13 @@ docs/          安装、设计和评测说明
 
 [评测方法](docs/EVALUATION.md) · [60例结果](evals/summary.json) · [抽样记录](evals/sample.json) · [首批20例](evals/batches/test20-summary.json)
 
+另用12道MedXpertQA胸片相关临床题做开发评测。固定版本的初版分歧流程未带来收益：临床初稿答对4/12，最终答对3/12，纠错0/8、误改1/4；同题单模型直接报告答对5/12。记录见[完整流程](evals/correction-development.json)和[单模型对照](evals/direct-development.json)。这些是另一来源的开发题，不与60例成绩合并。
+
+据此改为原始输入独立起草，并收紧改诊断的判据要求。两例已知错误的[针对性回归](evals/correction-safeguard-regression.json)通过；修正后的总体准确率尚未测量。[24道保留测试题](evals/medxpert-splits.json)仍未运行。
+
 ## 开发
 
-当前107项测试通过，覆盖结构化输出、证据引用、生成循环及协作流程。测试环境见 [运行环境](evals/environment.json)。
+当前113项测试通过，覆盖结构化输出、证据引用、生成循环及协作流程。测试环境见 [运行环境](evals/environment.json)。
 
 ```bash
 pytest -q

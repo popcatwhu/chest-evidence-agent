@@ -132,3 +132,59 @@ def test_unresolved_dispute_remains_visible_without_forcing_revision(monkeypatch
     result = workflow.adjudicate_dispute(s)
     assert result["collaboration_notes"]
     assert result["adjudication"]["decision"] == "unresolved"
+
+
+def test_patient_citations_alone_cannot_authorize_diagnostic_revision():
+    decision = Adjudication(
+        decision="revise",
+        preferred_choice="B",
+        reason="another model agrees",
+        evidence_ids=["C-1"],
+    )
+    assert any(
+        "专业医学判据" in error for error in adjudication_errors(decision, state())
+    )
+
+
+def test_revision_requires_an_existing_professional_criterion_and_its_citation():
+    s = state()
+    s["evidence"][-1].source_type = "professional clinical reference"
+    decision = Adjudication(
+        decision="revise",
+        preferred_choice="B",
+        reason="patient-specific reason",
+        evidence_ids=["C-1", "K-1"],
+        criterion_source_id="K-1-S1-1",
+    )
+    assert not adjudication_errors(decision, s)
+    decision.evidence_ids = ["C-1"]
+    assert adjudication_errors(decision, s)
+    decision.evidence_ids = ["C-1", "K-1"]
+    s["evidence"][-1].source_type = "public health information"
+    assert adjudication_errors(decision, s)
+
+
+def test_metadata_repair_cannot_silently_change_the_answer(monkeypatch):
+    monkeypatch.setattr(workflow, "log", lambda *a: None)
+    s = state("A")
+    s["issues"] = ["引用不存在"]
+    changed = s["report"].model_copy(deep=True)
+    changed.answer_choice = "B"
+    monkeypatch.setattr(agents.coordinator, "run", lambda *a, **kw: changed)
+    result = workflow.repair(s)
+    assert result["report"].answer_choice == "A"
+    assert result["agent_messages"][-1]["output"]["unsupported_change_rejected"]
+    assert result["collaboration_notes"]
+
+
+def test_explicitly_non_guideline_information_is_not_a_professional_criterion():
+    from chest_agent.disputes import professional_source
+
+    assert not professional_source(
+        "public health information, not a clinical guideline"
+    )
+    assert not professional_source("reference, not a clinical guideline")
+    assert professional_source(
+        "professional clinical reference; not a patient-specific confirmation"
+    )
+    assert professional_source("government clinical guideline excerpt")

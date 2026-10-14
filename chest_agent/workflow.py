@@ -26,6 +26,7 @@ from .independent_review import (
     resolve_review,
     SelectedCaseProfile,
     resolve_facts,
+    resolve_report_references,
 )
 from .recommendations import check_recommendations
 from .clinical_consistency import clinical_inconsistencies
@@ -73,6 +74,7 @@ class State(TypedDict, total=False):
     dispute_plan: dict | None
     adjudication: dict | None
     dispute_retrieval: dict
+    citation_normalizations: list[dict]
 
 
 def log(state, stage, message):
@@ -385,14 +387,37 @@ def diagnose(state):
     log(state, "clinical_agent", "Lingshu 临床 Agent 综合证据，独立形成诊断报告")
     image = reasoning_image(state)
     result = agents.clinician.run(
-        report_prompt(state), report_schema(state["question"]), image, max_tokens=1800
+        report_prompt(clinical_input(state)),
+        report_schema(state["question"]),
+        image,
+        max_tokens=1800,
     )
+    result, mappings = resolve_report_references(result, state["evidence"])
     return {
         "report": result,
+        "citation_normalizations": mappings,
         "agent_messages": [
             *state.get("agent_messages", []),
             agents.message(agents.clinician, "completed", result.model_dump()),
         ],
+    }
+
+
+def clinical_input(state):
+    if state["mode"] != "verified":
+        return state
+    image = reasoning_image(state)
+    return {
+        **state,
+        "mode": "direct",
+        "case": {**state["case"], "image_path": image},
+        "evidence": [
+            e
+            for e in state["evidence"]
+            if e.kind == "case" or (e.id == "I-original" and image)
+        ],
+        "profile": CaseProfile(facts=[]),
+        "clinical_contrast": None,
     }
 
 
@@ -593,12 +618,28 @@ def adjudicate_dispute(state):
             "依据原始病例、原图和资料处理诊断分歧。decision为keep（保留草稿）、revise（提出证据支持的修订）"
             "或unresolved（无法裁决）。不要投票；另一模型的意见不是新证据；资料描述的疾病标准不是患者已满足这些标准。"
             "reason说明决定性患者依据、对另一候选的反证和未解决限制；evidence_ids必须包含患者依据。"
-            "选择题preferred_choice填实际选项；revise必须提出不同于草稿的选项。没有充分患者依据时选unresolved。\n"
+            "选择题preferred_choice填实际选项；revise必须提出不同于草稿的选项。"
+            "改诊断还必须选择criterion_source_id：能直接支持争议医学判断的专业资料片段编号，其K证据也写入evidence_ids。"
+            "没有专业判据，或资料只泛泛提到疾病时选unresolved，不能抄写另一模型的理由当依据。\n"
             + dispute_context(state)
             + "\n检索判据："
             + json.dumps(state["dispute_plan"], ensure_ascii=False)
             + "\n原始证据："
-            + reasoning_context(state),
+            + reasoning_context(
+                {
+                    **state,
+                    "evidence": [e for e in state["evidence"] if e.kind != "knowledge"],
+                }
+            )
+            + "\n可引用的资料判据片段："
+            + json.dumps(
+                [
+                    {k: r[k] for k in ("id", "evidence_id", "text", "source_type")}
+                    for r in source_index(state["evidence"])
+                    if r["kind"] == "knowledge"
+                ],
+                ensure_ascii=False,
+            ),
             Adjudication,
             reasoning_image(state),
             max_tokens=700,
@@ -611,6 +652,15 @@ def adjudicate_dispute(state):
             result = None
         else:
             result = decision.model_dump()
+            if decision.criterion_source_id:
+                result["criterion"] = next(
+                    (
+                        r
+                        for r in source_index(state["evidence"])
+                        if r["id"] == decision.criterion_source_id
+                    ),
+                    None,
+                )
             if decision.decision == "unresolved":
                 notes.append("诊断分歧未解决：" + decision.reason)
         messages.append(
@@ -770,15 +820,45 @@ def repair(state):
         reasoning_image(state),
         max_tokens=1800,
     )
+    result, mappings = resolve_report_references(result, state["evidence"])
+    old = state["report"]
+    targets = {old.most_likely.name, old.answer_choice}
+    diagnostic_challenge = (
+        bool(
+            state.get("adjudication") and state["adjudication"]["decision"] == "revise"
+        )
+        or any(
+            detail["report_quote"] in targets
+            for detail in state.get("review_details", [])
+        )
+        or bool(diagnosis_issues(old))
+    )
+    notes = list(state.get("collaboration_notes", []))
+    rejected_change = not diagnostic_challenge and (
+        result.answer_choice != old.answer_choice
+        or result.most_likely.name != old.most_likely.name
+    )
+    if rejected_change:
+        result = old.model_copy(deep=True)
+        notes.append("引用或检查建议修订提出了无诊断依据的结论变更，已保留临床草稿")
     return {
         "report": result,
+        "citation_normalizations": [
+            *state.get("citation_normalizations", []),
+            *mappings,
+        ],
+        "collaboration_notes": notes,
         "repairs": state["repairs"] + 1,
         "agent_messages": [
             *state.get("agent_messages", []),
             agents.message(
                 agents.coordinator,
                 "completed",
-                {"challenges": state["issues"], "revised_report": result.model_dump()},
+                {
+                    "challenges": state["issues"],
+                    "revised_report": result.model_dump(),
+                    "unsupported_change_rejected": rejected_change,
+                },
             ),
         ],
     }
@@ -927,6 +1007,7 @@ def execute(run_id):
                 },
                 "plan": state["plan"].model_dump(),
                 "profile": state["profile"].model_dump(),
+                "citation_normalizations": state.get("citation_normalizations", []),
                 "model": config.MODEL.name,
                 "collaboration": {
                     "protocol": "heterogeneous-review-v1",

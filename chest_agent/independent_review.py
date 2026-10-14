@@ -120,6 +120,37 @@ def report_index(report: Report):
     return [{"id": f"R-{i + 1}", "text": text} for i, text in enumerate(texts)]
 
 
+def resolve_report_references(report, evidence):
+    """Resolve only real snippet IDs. Unknown references remain validation errors."""
+    rows = {r["id"]: r for r in source_index(evidence)}
+    result = report.model_copy(deep=True)
+    candidates = [result.most_likely, *result.differentials]
+    claims = [
+        *result.findings,
+        *result.recommended_checks,
+        *[claim for c in candidates for claim in c.support + c.against],
+    ]
+    changes = []
+    for claim in claims:
+        references = []
+        for ref in claim.evidence_ids:
+            source = rows.get(ref)
+            if source:
+                references.append(source["evidence_id"])
+                changes.append(
+                    {
+                        "source_id": ref,
+                        "evidence_id": source["evidence_id"],
+                        "start": source["start"],
+                        "end": source["end"],
+                    }
+                )
+            else:
+                references.append(ref)
+        claim.evidence_ids = list(dict.fromkeys(references))
+    return result, changes
+
+
 def resolve_review(review, report_rows, source_rows):
     reports = {row["id"]: row for row in report_rows}
     sources = {row["id"]: row for row in source_rows}

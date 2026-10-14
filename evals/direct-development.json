@@ -1,0 +1,110 @@
+{
+  "type": "development diagnostic-correction MCQ evaluation",
+  "source": "https://huggingface.co/datasets/TsinghuaC3I/MedXpertQA",
+  "source_revision": "7e7c465a68eb2b866926bfa59c8c9d17a8daba65",
+  "pipeline": {
+    "manifest_sha256": "fcb1cb8b9ad1f7dd97439d19e90a112db1d486e1605839d27a4742dbfecacb16",
+    "source_revision": "456b4a356fa013d86d1e56a26b59aa2966556f75",
+    "source_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "split": "development",
+    "mode": "direct",
+    "health": {
+      "backend": "local",
+      "pipeline_source_sha256": "91700e787b2aa005007212753e453713d1d844d3141203b8e22cc51700da7132",
+      "model_name": "Lingshu-32B-NF4",
+      "model_ready": true,
+      "cxr_reader": "NV-Reason-CXR-3B",
+      "minimal_mcq_reader": "iamjb",
+      "clinical_contrast": true,
+      "agent_team": [
+        {
+          "agent": "radiology",
+          "model": "NV-Reason-CXR-3B",
+          "backend": "local",
+          "quantization": "BF16",
+          "source_revision": {
+            "repository": "nvidia/NV-Reason-CXR-3B",
+            "revision": "056bd0383b35226554da9dc5866e095df174ae19"
+          }
+        },
+        {
+          "agent": "clinical",
+          "model": "Lingshu-32B-NF4",
+          "backend": "local",
+          "quantization": "NF4",
+          "source_revision": {
+            "repository": "lingshu-medical-mllm/Lingshu-32B",
+            "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+            "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+          }
+        },
+        {
+          "agent": "review",
+          "model": "Qwen3-VL-8B-Instruct",
+          "backend": "local",
+          "quantization": "NF4",
+          "source_revision": {
+            "repository": "Qwen/Qwen3-VL-8B-Instruct",
+            "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+            "weights_verified": "LFS SHA256"
+          }
+        },
+        {
+          "agent": "coordinator",
+          "model": "Lingshu-32B-NF4",
+          "backend": "local",
+          "quantization": "NF4",
+          "source_revision": {
+            "repository": "lingshu-medical-mllm/Lingshu-32B",
+            "revision": "36b98277cacb60db86f34b75ce0540b1ea35183c",
+            "conversion": "bitsandbytes NF4 double quantization; visual and lm_head preserved"
+          }
+        }
+      ],
+      "team_models_ready": true,
+      "inference_paused": false,
+      "load_nf4": false,
+      "recheck_original_image": true,
+      "constrained_json": true,
+      "max_input_tokens": 8192,
+      "knowledge_documents": 15
+    },
+    "pipeline_source_sha256": "91700e787b2aa005007212753e453713d1d844d3141203b8e22cc51700da7132",
+    "corpus_sha256": "c352b6c8281eb5880afcbfef1d84bba263ed06544686c7a4c1020a66922985d1"
+  },
+  "metrics": {
+    "cases": 12,
+    "completed": 12,
+    "draft_correct": 5,
+    "draft_wrong": 7,
+    "draft_unavailable": 0,
+    "wrong_drafts_corrected": 0,
+    "correct_drafts_harmed": 0,
+    "correction_rate": 0.0,
+    "harm_rate": 0.0,
+    "net_correct_answers_changed": 0,
+    "final_correct": 5,
+    "final_accuracy": 0.4166666666666667
+  },
+  "answer_transitions": {
+    "correct_to_correct": 5,
+    "wrong_or_unavailable_to_wrong_or_unavailable": 7
+  },
+  "disputes_triggered": 0,
+  "new_reference_chunks": 0,
+  "adjudication_counts": {},
+  "failed_agent_turns": 0,
+  "median_seconds_completed": 13.5,
+  "peak_reserved_gib": 28.48,
+  "holdout_evaluated": false,
+  "limitations": [
+    "Image disjointness does not establish patient disjointness.",
+    "Public exam questions may have pretraining contamination.",
+    "Different source and task distribution from frozen ChestAgentBench; do not merge scores.",
+    "Modality inspection does not establish clinical answerability or label correctness.",
+    "Development measurements, not a new independent test score.",
+    "Draft versus final isolates later pipeline steps, not standalone-model versus full-team ablation.",
+    "MCQ label agreement does not establish open-ended diagnostic or clinical correctness.",
+    "Frozen ChestAgentBench 60-case score remains unchanged."
+  ]
+}

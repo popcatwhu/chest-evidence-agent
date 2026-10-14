@@ -1,0 +1,43 @@
+{
+  "type": "known-error safeguard engineering regression",
+  "pipeline_source_sha256": "1a6e3129cac68d015646d1f94d6615b6660becf77f94be5b4d07a2f0d1cd0608",
+  "base_commit": "456b4a356fa013d86d1e56a26b59aa2966556f75",
+  "records": [
+    {
+      "public_case_id": "MM-1077",
+      "same_history_question_image_pixels": true,
+      "previous_final_choice": "A",
+      "direct_control_choice": "E",
+      "current_final_choice": "E",
+      "matches_reference_answer": true,
+      "all_agent_turns_completed": true,
+      "adjudication_accepted": false,
+      "unsupported_metadata_change_rejected": true,
+      "verification_status": "needs_review",
+      "elapsed_seconds": 175.99,
+      "gpu_peak_reserved_gib": 28.77
+    },
+    {
+      "public_case_id": "MM-1981",
+      "same_history_question_image_pixels": true,
+      "previous_final_choice": "C",
+      "direct_control_choice": "B",
+      "current_final_choice": "B",
+      "matches_reference_answer": true,
+      "all_agent_turns_completed": true,
+      "adjudication_accepted": false,
+      "unsupported_metadata_change_rejected": false,
+      "verification_status": "needs_review",
+      "elapsed_seconds": 115.21,
+      "gpu_peak_reserved_gib": 28.62
+    }
+  ],
+  "unit_tests_passed": 112,
+  "holdout_evaluated": false,
+  "limitations": [
+    "Both cases selected after seeing development errors; not an independent accuracy estimate.",
+    "Broader accuracy of the revised pipeline has not been measured.",
+    "Citation and criterion checks do not establish clinical correctness.",
+    "The original 60-case score and completed development trials remain unchanged."
+  ]
+}

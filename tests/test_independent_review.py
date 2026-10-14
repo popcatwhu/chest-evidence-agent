@@ -206,6 +206,36 @@ def test_known_snippet_references_resolve_to_evidence_without_accepting_unknown_
     assert not notes
 
 
+def test_clinical_input_is_identical_to_direct_input_despite_auxiliary_opinions():
+    s = state()
+    s["evidence"].append(
+        Evidence(id="K-1", kind="knowledge", title="source", content="SECRET_KNOWLEDGE")
+    )
+    s["evidence"].append(
+        Evidence(
+            id="I-observe", kind="image", title="observer", content="SECRET_OBSERVER"
+        )
+    )
+    s["clinical_contrast"] = "SECRET_CONTRAST"
+    initial = workflow.clinical_input(s)
+    prompt = workflow.report_prompt(initial)
+    assert "SECRET" not in prompt
+    assert "reported fever" in prompt
+    assert initial["profile"].facts == []
+
+
+def test_report_reference_normalization_preserves_choice_and_rejects_unknown_snippets():
+    from chest_agent.independent_review import resolve_report_references
+
+    draft = report("reported fever", choice="A")
+    draft.most_likely.support[0].evidence_ids = ["C-1-S1-1", "C-99-S1-1"]
+    normalized, changes = resolve_report_references(draft, state()["evidence"])
+    assert normalized.answer_choice == "A"
+    assert normalized.most_likely.support[0].evidence_ids == ["C-1", "C-99-S1-1"]
+    assert draft.most_likely.support[0].evidence_ids[0] == "C-1-S1-1"
+    assert changes[0]["evidence_id"] == "C-1"
+
+
 @pytest.mark.parametrize("wrong", [True, False])
 def test_injected_false_claim_and_correct_control(monkeypatch, wrong):
     monkeypatch.setattr(workflow, "log", lambda *args: None)
