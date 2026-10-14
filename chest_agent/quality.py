@@ -40,7 +40,8 @@ def ground_facts(profile: CaseProfile, evidence: list[Evidence]):
 def report_texts(report: Report):
     candidates = [report.most_likely, *report.differentials]
     return (
-        [c.name for c in candidates]
+        ([report.answer_choice] if report.answer_choice else [])
+        + [c.name for c in candidates]
         + [claim.text for c in candidates for claim in c.support + c.against]
         + [claim.text for claim in report.findings]
         + report.missing_information

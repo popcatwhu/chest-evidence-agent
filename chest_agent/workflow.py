@@ -9,7 +9,6 @@ from .schemas import (
     Evidence,
     Plan,
     Report,
-    Review,
     Change,
     CaseProfile,
     Observation,
@@ -17,10 +16,27 @@ from .schemas import (
     report_schema,
 )
 from .quality import ground_facts, anchor_review, known_test_conflicts
+from .independent_review import (
+    BlindOpinion,
+    BlindChoiceOpinion,
+    IndexedReview,
+    blind_prompt,
+    report_index,
+    source_index,
+    resolve_review,
+    SelectedCaseProfile,
+    resolve_facts,
+)
 from .recommendations import check_recommendations
 from .clinical_consistency import clinical_inconsistencies
 from .diagnosis_checks import diagnosis_issues
-from .clinical_contrast import ClinicalContrast, ground_contrast, contrast_prompt
+from .clinical_contrast import (
+    ClinicalContrast,
+    IndexedClinicalContrast,
+    ground_contrast,
+    contrast_prompt,
+    resolve_contrast,
+)
 from .tools import image_tools, retrieve
 
 RUN_LOCK = Lock()
@@ -45,6 +61,7 @@ class State(TypedDict, total=False):
     contrast_notes: list[str]
     agent_messages: list[dict]
     collaboration_notes: list[str]
+    blind_opinion: BlindOpinion | None
 
 
 def log(state, stage, message):
@@ -110,18 +127,20 @@ def profile(state):
     if state["mode"] == "direct":
         return {"profile": CaseProfile(facts=[])}
     log(state, "facts", "提取症状、风险因素及已提供检查，并逐项核对原文")
-    sources = [e.model_dump() for e in state["evidence"] if e.kind == "case"]
+    sources = source_index([e for e in state["evidence"] if e.kind == "case"])
     raw = backend.json(
         "提取病例中明确提供的临床事实。name为简短中文项目名或检查英文缩写（如CD4、LDH）。"
-        "value必须保留原始值及单位；已明确升高但没有数值时写升高，不编造数值。"
-        "source_id使用C编号，source_quote逐字复制对应来源中的片段，英文原文不得翻译。"
+        "只选择source_id中的完整来源片段编号（C-...-S...），程序会复制对应原文及数值。"
+        "不要生成value或source_quote，不翻译或改写引用。"
         "包括年龄性别、全部症状、全部检查和补充结果；每个症状、风险因素、检查单独一项，不能把整段病史作为一个事实。不要提取编号或网址。"
         "不推断病因或诊断，不把未提到某症状当阴性；至多16项。\n"
         + json.dumps(sources, ensure_ascii=False),
-        CaseProfile,
+        SelectedCaseProfile,
         max_tokens=1500,
     )
-    grounded, rejected = ground_facts(raw, state["evidence"])
+    resolved, rejected = resolve_facts(raw, sources)
+    grounded, invalid = ground_facts(resolved, state["evidence"])
+    rejected.extend(invalid)
     log(
         state,
         "facts",
@@ -299,14 +318,23 @@ def contrast(state):
         contrast_prompt(reasoning_context(state))
         + "\nTask instructions and options (not patient facts):\n"
         + state["question"]
+        + "\nIndexed patient source snippets:\n"
+        + json.dumps(
+            source_index([e for e in state["evidence"] if e.kind == "case"]),
+            ensure_ascii=False,
+        )
     )
     try:
         raw = backend.json(
-            prompt, ClinicalContrast, reasoning_image(state), max_tokens=1800
+            prompt, IndexedClinicalContrast, reasoning_image(state), max_tokens=1800
+        )
+        resolved, selected_notes = resolve_contrast(
+            raw, source_index(state["evidence"])
         )
         grounded, notes = ground_contrast(
-            raw, state["evidence"], allow_original=bool(reasoning_image(state))
+            resolved, state["evidence"], allow_original=bool(reasoning_image(state))
         )
+        notes = selected_notes + notes
     except ValueError:
         log(
             state,
@@ -407,6 +435,56 @@ def update_report(state):
     return {"report": result, "agent_messages": state.get("agent_messages", [])}
 
 
+def consult(state):
+    if state["mode"] != "verified":
+        return {}
+    log(state, "independent_consult", "Qwen 根据原始输入独立判断，尚未读取临床报告")
+    messages = list(state.get("agent_messages", []))
+    notes = list(state.get("collaboration_notes", []))
+    try:
+        opinion = agents.reviewer.run(
+            blind_prompt(state),
+            BlindChoiceOpinion
+            if report_schema(state.get("question", "")) is not Report
+            else BlindOpinion,
+            state["case"].get("image_path"),
+            max_tokens=1100,
+        )
+        valid = []
+        for candidate in opinion.candidates:
+            errors = validate_evidence(
+                Report(most_likely=candidate),
+                [
+                    e
+                    for e in state["evidence"]
+                    if e.kind == "case" or e.id == "I-original"
+                ],
+                allow_original=bool(state["case"].get("image_path")),
+            )
+            if errors:
+                notes.extend("独立候选未采用：" + error for error in errors)
+            else:
+                valid.append(candidate)
+        opinion.candidates = valid
+        if not valid:
+            opinion.answer_choice = None
+            notes.append("独立判断未返回具有有效患者引用的候选")
+        messages.append(
+            agents.message(
+                agents.reviewer, "completed", {"phase": "blind", **opinion.model_dump()}
+            )
+        )
+    except Exception as error:
+        opinion = None
+        notes.append("独立判断未完成")
+        messages.append(agents.message(agents.reviewer, "failed", error=str(error)))
+    return {
+        "blind_opinion": opinion,
+        "agent_messages": messages,
+        "collaboration_notes": notes,
+    }
+
+
 def verify(state):
     if state["mode"] != "verified":
         return {"issues": []}
@@ -422,22 +500,38 @@ def verify(state):
         + clinical_inconsistencies(state["report"], state["evidence"])
         + diagnosis_issues(state["report"])
     )
+    sources, targets = source_index(state["evidence"]), report_index(state["report"])
+    opinion = state.get("blind_opinion")
+    disagreement = bool(
+        opinion
+        and opinion.answer_choice
+        and state["report"].answer_choice
+        and opinion.answer_choice != state["report"].answer_choice
+    )
     review_prompt = (
         "复核以下诊断报告。仅列实际发现的问题，例如编造病例事实、把工具失败当阴性、"
         "把模型分数当疾病概率、引用资料来证明患者症状、忽略明显证据冲突。"
         "重点检查：资料未提及某症状不能改写成无该症状；低分类分数不能改写成影像未见病变。"
         "不要因存在不确定性而要求确定诊断；合理的鉴别诊断不算错误。无实际问题时issues=[]。"
-        "每个问题的report_quote必须逐字复制报告中有问题的完整句子或字段值，reason解释与证据的矛盾，evidence_ids引用对应证据。"
-        "source_quote必须逐字引用能证明矛盾的证据原文。I-observe是视觉观察而不是分类分数。只复核报告，不要把证据中的免责声明当错误。已经提供的检查不应被再次列为缺失。"
+        "每个问题只选择report_id（R编号）与source_id（来源S编号），reason解释该原文如何反驳该字段。"
+        "无需重新抄写引文。I-observe是模型视觉观察，不是像素级证实；I-original无文字片段，不能伪造原图引文。"
+        "已经提供的检查不应被再次列为缺失。独立候选是另一模型的意见，不是新增证据。"
+        "比较独立判断与临床报告，尤其核对题目要求和选项字母；不同意见本身不能证明错误。"
         "没有引用模型分数的句子，不能指责报告把分数当成概率；不要输出泛泛的风险提醒。"
-        "这是模型复核，不是临床验证。\n证据："
-        + reasoning_context(state)
+        "这是模型复核，不是临床验证。\n任务问题和选项（不是患者事实）："
+        + state.get("question", "")
+        + "\n来源片段："
+        + json.dumps(sources, ensure_ascii=False)
+        + "\n报告字段："
+        + json.dumps(targets, ensure_ascii=False)
+        + "\n独立判断："
+        + (opinion.model_dump_json() if opinion else "未完成")
         + "\n待复核报告："
         + state["report"].model_dump_json()
     )
     try:
         review = agents.reviewer.run(
-            review_prompt, Review, reasoning_image(state), max_tokens=900
+            review_prompt, IndexedReview, reasoning_image(state), max_tokens=900
         )
     except Exception as error:
         log(state, "review_agent", "独立审查未完成；保留诊断草稿，标记需要复核")
@@ -454,7 +548,13 @@ def verify(state):
                 agents.message(agents.reviewer, "failed", error=str(error)),
             ],
         }
-    accepted, notes = anchor_review(review, state["report"], state["evidence"])
+    resolved, spans, notes = resolve_review(review, targets, sources)
+    accepted, rejected = anchor_review(resolved, state["report"], state["evidence"])
+    notes.extend(rejected)
+    if disagreement and not accepted:
+        notes.append(
+            f"独立判断选项{opinion.answer_choice}与报告{state['report'].answer_choice}不同，尚无充分原文依据判定哪方错误"
+        )
     issues = list(
         dict.fromkeys(issues + [f"“{i.report_quote}”：{i.reason}" for i in accepted])
     )
@@ -474,6 +574,9 @@ def verify(state):
                 {
                     "accepted_challenges": [i.model_dump() for i in accepted],
                     "unanchored_challenges": notes,
+                    "phase": "comparison",
+                    "source_spans": spans,
+                    "choice_disagreement": disagreement,
                 },
             ),
         ],
@@ -488,7 +591,13 @@ def repair(state):
         + "\n修改以下报告以解决问题，只保留证据支持的结论："
         + state["report"].model_dump_json()
         + "\n问题："
-        + json.dumps(state["issues"], ensure_ascii=False),
+        + json.dumps(state["issues"], ensure_ascii=False)
+        + "\n独立判断仅供对照，不能因另一模型不同意而修改结论："
+        + (
+            state["blind_opinion"].model_dump_json()
+            if state.get("blind_opinion")
+            else "未完成"
+        ),
         report_schema(state["question"]),
         reasoning_image(state),
         max_tokens=1800,
@@ -522,6 +631,7 @@ def build_graph():
         ("search", search),
         ("contrast", contrast),
         ("diagnose", diagnose),
+        ("consult", consult),
         ("verify", verify),
         ("repair", repair),
         ("update", update_report),
@@ -538,6 +648,7 @@ def build_graph():
             "search",
             "contrast",
             "diagnose",
+            "consult",
         ],
         [
             "profile",
@@ -547,6 +658,7 @@ def build_graph():
             "search",
             "contrast",
             "diagnose",
+            "consult",
             "verify",
         ],
     ):
@@ -648,6 +760,8 @@ def execute(run_id):
                     "messages": state.get("agent_messages", []),
                     "execution": "serial GPU with one auxiliary model slot",
                     "independent_review": run["mode"] == "verified",
+                    "blind_consultation": run["mode"] == "verified",
+                    "quote_selection": "source character spans",
                 },
                 "cxr_expert_enabled": config.CXR_EXPERT_ENABLED,
                 "clinical_contrast": state["clinical_contrast"].model_dump()

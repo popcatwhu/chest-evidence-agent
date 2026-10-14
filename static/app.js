@@ -32,6 +32,7 @@ const stageNames = {
   radiology_agent: '影像 Agent',
   clinical_agent: '临床 Agent',
   review_agent: '独立审查 Agent',
+  independent_consult: '独立判断',
   coordinator_agent: '协调 Agent',
   radiology: '专用影像工具',
   plan: '分析计划',
@@ -376,6 +377,8 @@ function collaborationPanel(team) {
     let summary = m.error ? `<p>${esc(m.error)}</p>` : '';
     if (o.observations) summary += list(o.observations);
     if (o.most_likely) summary += `<p>候选：${esc(o.most_likely.name)}</p>`;
+    if (o.phase === 'blind') summary += `<p>读取其他模型报告前的判断${o.answer_choice ? ' · 选项 ' + esc(o.answer_choice) : ''}</p>${list((o.candidates || []).map(x => x.name))}${list(o.limitations || [])}`;
+    if (o.choice_disagreement) summary += '<p>独立判断与报告的选项不同，需结合原始证据核对。</p>';
     if (o.accepted_challenges) summary += o.accepted_challenges.length ? list(o.accepted_challenges.map(x => `${x.report_quote}：${x.reason}`)) : '<p>本轮未保留有原文依据的质疑。</p>';
     if (o.unanchored_challenges?.length) summary += list(o.unanchored_challenges);
     if (o.challenges) summary += list(o.challenges);

@@ -1,0 +1,26 @@
+{
+  "date": "2026-10-14T06:28:06.474955+00:00",
+  "type": "synthetic contradiction review regression",
+  "model": {
+    "agent": "review",
+    "model": "Qwen3-VL-8B-Instruct",
+    "backend": "local",
+    "quantization": "NF4",
+    "source_revision": {
+      "repository": "Qwen/Qwen3-VL-8B-Instruct",
+      "revision": "0c351dd01ed87e9c1b53cbc748cba10e6187ff3b",
+      "weights_verified": "LFS SHA256"
+    }
+  },
+  "cases": 6,
+  "completed": 6,
+  "injected_errors_detected": 3,
+  "injected_errors": 3,
+  "correct_controls_flagged": 0,
+  "correct_controls": 3,
+  "limitations": [
+    "Small synthetic engineering check, not diagnostic accuracy.",
+    "Only literal patient-fact contradictions are tested.",
+    "Frozen 60-patient evaluation remains unchanged."
+  ]
+}

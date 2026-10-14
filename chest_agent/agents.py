@@ -89,8 +89,9 @@ reviewer = ModelAgent(
     "review",
     ModelBackend(model_path=config.REVIEW_MODEL, backend_type="local", load_nf4=True),
     "You are an independent evidence-review agent using a different model. "
-    "Inspect the supplied report against original patient evidence and image. "
-    "Challenge specific unsupported statements with exact quotations and source IDs. "
+    "In the blind phase, independently assess the original history and supplied image; no report is provided. "
+    "In the comparison phase, inspect the supplied report against original patient evidence and image. "
+    "Select source IDs to challenge specific unsupported statements. "
     "Do not defer to another agent's authority or majority agreement.",
     auxiliary=True,
 )

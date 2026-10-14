@@ -14,6 +14,11 @@ from chest_agent.schemas import (
 )
 from chest_agent.quality import ground_facts, normalized
 from chest_agent.diagnosis_checks import canonical_name
+from chest_agent.independent_review import (
+    SelectedFact,
+    SelectedCaseProfile,
+    resolve_facts,
+)
 
 
 class ConciseFact(Fact):
@@ -49,6 +54,30 @@ class ClinicalContrast(StrictModel):
         default_factory=list, max_length=3
     )
     remaining_questions: list[str] = Field(default_factory=list, max_length=3)
+
+
+class IndexedClinicalContrast(ClinicalContrast):
+    key_case_clues: list[SelectedFact] = Field(default_factory=list, max_length=5)
+
+
+def resolve_contrast(raw, source_rows):
+    profile, notes = resolve_facts(
+        SelectedCaseProfile(facts=raw.key_case_clues), source_rows
+    )
+    data = raw.model_dump(exclude={"key_case_clues"})
+    references = {r["id"]: r["evidence_id"] for r in source_rows}
+    for candidate in data["hypotheses"]:
+        for claim in candidate["support"] + candidate["against"]:
+            claim["evidence_ids"] = list(
+                dict.fromkeys(references.get(ref, ref) for ref in claim["evidence_ids"])
+            )
+    result = ClinicalContrast.model_validate(
+        {
+            **data,
+            "key_case_clues": [fact.model_dump() for fact in profile.facts],
+        }
+    )
+    return result, notes
 
 
 def source_text(evidence):
@@ -125,9 +154,13 @@ def contrast_prompt(context):
     return (
         "Before drafting a diagnostic report, make a concise clinical evidence contrast. "
         "Use Chinese disease names, short English explanations (at most25words per claim), "
-        "and exact source quotations. Clue values must be verbatim substrings of source_quote, not translations or paraphrases. Select up to5 distinctive GIVEN clinical clues, prioritizing "
+        "Select up to5 distinctive GIVEN clinical clues, prioritizing "
         "time course, recurrence, associations, risks, and existing test results. A clue is valid "
-        "only with a verbatim quote from a C-source; generic K-criteria are not patient facts. "
+        "only by selecting an indexed C-source snippet: key_case_clues contains name and source_id "
+        "(the full C-...-S... snippet ID), no value or source_quote. The program copies its exact text. "
+        "Generic K-criteria are not patient facts. "
+        "Hypothesis support/against evidence_ids must reference evidence IDs such as C-1 or I-original, "
+        "not snippet IDs; snippet IDs are only for key_case_clues. "
         "Compare2 or3 genuinely distinct plausible disease causes: patient-specific support, "
         "opposing evidence, and unknown confirmation evidence. Explain distinctive history rather "
         "than only repeating a broad radiographic finding. Do not infer unprovided exposure, "

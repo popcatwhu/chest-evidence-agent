@@ -286,6 +286,31 @@ class ModelBackend:
     def json(self, prompt, schema, image_path=None, max_tokens=1800):
         is_report = schema.__name__ in {"Report", "ChoiceReport"}
         templates = {
+            "SelectedCaseProfile": {
+                "facts": [{"name": "检查或病史项目", "source_id": "C-1-S1-1"}]
+            },
+            "BlindOpinion": {
+                "answer_choice": None,
+                "candidates": [
+                    {
+                        "name": "独立候选疾病",
+                        "support": [
+                            {"text": "患者自身的支持依据", "evidence_ids": ["C-1"]}
+                        ],
+                        "against": [],
+                    }
+                ],
+                "limitations": ["尚缺少的证据"],
+            },
+            "IndexedReview": {
+                "issues": [
+                    {
+                        "report_id": "R-1",
+                        "source_id": "C-1-S1",
+                        "reason": "该来源原文如何反驳该报告字段",
+                    }
+                ],
+            },
             "ExamAnswer": {
                 "reason": "Brief image-grounded reasoning, at most two sentences.",
                 "answer_choice": "One letter A to F",
@@ -401,7 +426,19 @@ class ModelBackend:
                 "evidence_ids": ["实际新增证据ID"],
             },
         }
-        template = templates["Report" if is_report else schema.__name__].copy()
+        template_name = "Report" if is_report else schema.__name__
+        if template_name == "BlindChoiceOpinion":
+            template_name = "BlindOpinion"
+        if template_name == "IndexedClinicalContrast":
+            template_name = "ClinicalContrast"
+        template = templates[template_name].copy()
+        if schema.__name__ == "BlindChoiceOpinion":
+            template["answer_choice"] = "A至F中的一个真实选项字母"
+            prompt += "\n独立选择最符合题意和患者证据的选项，answer_choice必须填写字母，候选分析中解释支持依据；不确定性写入limitations。"
+        if schema.__name__ == "IndexedClinicalContrast":
+            template["key_case_clues"] = [
+                {"name": "Distinctive patient clue", "source_id": "C-1-S1-1"}
+            ]
         if schema.__name__ == "ChoiceReport":
             template["answer_choice"] = "选项字母"
             prompt += "\n本题有明确选项，answer_choice必须是A至F中的一个大写字母，不能为null。"

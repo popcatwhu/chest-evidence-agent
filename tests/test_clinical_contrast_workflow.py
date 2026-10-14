@@ -2,21 +2,23 @@ import importlib.util
 from pathlib import Path
 import sys
 import pytest
+from chest_agent.independent_review import BlindOpinion, IndexedReview
 from chest_agent import config, store
-from chest_agent.schemas import CaseProfile, Observation, Plan, Report, Review
+from chest_agent.schemas import Plan, Report, Review
+from chest_agent.independent_review import SelectedCaseProfile as CaseProfile
 
 from chest_agent import clinical_contrast as contrast, workflow as wf
 
 
 @pytest.fixture(autouse=True)
 def stub_review_model(monkeypatch):
-    monkeypatch.setattr(
-        wf.agents.reviewer,
-        "run",
-        lambda prompt, schema, image=None, **kw: wf.backend.json(
-            prompt, schema, image, **kw
-        ),
-    )
+    def reviewer(prompt, schema, image=None, **kw):
+        if schema is BlindOpinion:
+            return BlindOpinion(candidates=[report().most_likely])
+        result = wf.backend.json(prompt, Review, image, **kw)
+        return IndexedReview(issues=[]) if result.issues == [] else result
+
+    monkeypatch.setattr(wf.agents.reviewer, "run", reviewer)
 
 
 def report():
@@ -43,15 +45,13 @@ def test_enabled_contrast_reaches_report_and_is_saved(tmp_path, monkeypatch):
             return CaseProfile(facts=[])
         if schema is Plan:
             return Plan(query="fever", reason="分析")
-        if schema is contrast.ClinicalContrast:
-            return contrast.ClinicalContrast.model_validate(
+        if schema is contrast.IndexedClinicalContrast:
+            return contrast.IndexedClinicalContrast.model_validate(
                 {
                     "key_case_clues": [
                         {
                             "name": "fever",
-                            "value": "fever",
-                            "source_id": "C-1",
-                            "source_quote": "reported fever",
+                            "source_id": "C-1-S1-1",
                         }
                     ],
                     "hypotheses": [
@@ -94,7 +94,7 @@ def test_failed_contrast_is_visible_without_losing_valid_report(tmp_path, monkey
             return CaseProfile(facts=[])
         if schema is Plan:
             return Plan(query="fever", reason="分析")
-        if schema is contrast.ClinicalContrast:
+        if schema is contrast.IndexedClinicalContrast:
             raise ValueError("invalid matrix")
         if schema is Report:
             return report()

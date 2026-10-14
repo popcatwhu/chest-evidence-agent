@@ -8,14 +8,15 @@
 
 - 上传胸片和病史，生成候选诊断、鉴别诊断及检查建议。
 - 调用胸片分类、解剖区域分割和专用观察模型，检索医学参考资料。
-- 在生成报告前比较候选病因，生成后检查证据引用和事实冲突，最多修订一次。
+- 对照候选病因；Qwen 先独立判断，再检查临床报告，最多修订一次。
+- 临床线索和审查引用通过原文片段编号选择，保存可追踪的来源位置。
 - 补充病例资料后重新分析，查看历史报告和判断变化，下载完整记录。
 
 | Agent | 模型 | 职责 |
 | --- | --- | --- |
 | 影像 | NV-Reason-CXR-3B，BF16 | 独立观察胸片，不接收临床结论 |
 | 临床 | Lingshu-32B，NF4 | 结合病史、原图与工具证据形成候选诊断 |
-| 审查 | Qwen3-VL-8B-Instruct，NF4 | 使用独立模型核对报告与原始证据 |
+| 审查 | Qwen3-VL-8B-Instruct，NF4 | 先根据病史与原图独立判断，再对照报告及原始证据 |
 | 协调 | Lingshu-32B，NF4 | 根据有效质疑修订报告，保存未解决问题 |
 
 三个模型在 RTX 5090 32 GB 上分阶段执行。主模型常驻，影像和审查模型共用一个辅助显存槽，切换前释放前一个模型。
@@ -44,10 +45,12 @@ bash scripts/start.sh
 
 ```text
 病史 / 胸片 → NV 影像 Agent → 工具与检索 → Lingshu 临床 Agent
-          → Qwen 审查 Agent → Lingshu 协调修订 → 保存报告
+          → Qwen 独立判断 → Qwen 对照审查 → Lingshu 协调修订 → 保存报告
 ```
 
 LangGraph 管理流程，Pydantic 校验结构化输出。推理任务串行执行，SQLite 保存输入快照、报告和事件。前端使用 HTML、CSS 和 JavaScript；检索采用字符 TF-IDF。
+
+独立判断不接收临床报告、计划、检索结果或其他模型的观察。意见不同会记录分歧；只有能定位原始证据的质疑才触发修订。
 
 ```text
 chest_agent/   后端、模型调用和诊断流程
@@ -81,12 +84,16 @@ docs/          安装、设计和评测说明
 
 ## 开发
 
-当前84项测试通过，覆盖结构化输出、证据引用、生成循环及协作流程。测试环境见 [运行环境](evals/environment.json)。
+当前94项测试通过，覆盖结构化输出、证据引用、生成循环及协作流程。测试环境见 [运行环境](evals/environment.json)。
 
 ```bash
 pytest -q
 ruff format --check chest_agent scripts tests
 ```
+
+本地审查模型的[合成回归测试](evals/review-regression.json)发现3/3条注入的事实错误，3条正确对照未误报。复现命令为 `python -m scripts.review_regression`，应在没有其他 GPU 推理任务时执行。这是工程检查，不计入诊断准确率。
+
+两例已知病例的[多模型流程回归](evals/independent-consultation-regression.json)均完成独立判断与对照审查，峰值保留显存28.68 GiB。两例中未验证审查模型纠正诊断错误的能力；这些结果不替换冻结评测。
 
 ## 来源与许可
 

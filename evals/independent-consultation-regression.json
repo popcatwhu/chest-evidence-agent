@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-14",
+  "type": "known-case independent consultation engineering regression",
+  "records": [
+    {
+      "public_case_id": "14547",
+      "same_history_question_image_pixels": true,
+      "completed": true,
+      "model_count": 3,
+      "blind_choice": "C",
+      "draft_choice": "C",
+      "final_choice": "C",
+      "matches_reference_answer": true,
+      "accepted_review_challenges": 0,
+      "repairs": 0,
+      "grounded_fact_count": 6,
+      "clinical_contrast_candidate_count": 2,
+      "elapsed_seconds": 93.49,
+      "gpu_peak_reserved_gib": 28.39,
+      "fact_spans_persisted": true
+    },
+    {
+      "public_case_id": "13494",
+      "same_history_question_image_pixels": true,
+      "completed": true,
+      "model_count": 3,
+      "blind_choice": "B",
+      "draft_choice": "B",
+      "final_choice": "B",
+      "matches_reference_answer": true,
+      "accepted_review_challenges": 0,
+      "repairs": 1,
+      "grounded_fact_count": 6,
+      "clinical_contrast_candidate_count": 0,
+      "elapsed_seconds": 89.3,
+      "gpu_peak_reserved_gib": 28.68
+    }
+  ],
+  "unit_tests_passed": 94,
+  "limitations": [
+    "Previously evaluated cases used for debugging; this is not a new holdout test.",
+    "Agreement and citation integrity do not establish clinical correctness.",
+    "No diagnostic error correction by the reviewer was demonstrated in these two cases.",
+    "Frozen 60-patient accuracy remains 44/60 (73.33%)."
+  ]
+}

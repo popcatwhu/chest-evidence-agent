@@ -26,11 +26,18 @@ class Plan(StrictModel):
     hypotheses: list[str] = Field(default_factory=list, max_length=4)
 
 
+class SourceSpan(StrictModel):
+    id: str
+    start: int = Field(ge=0)
+    end: int = Field(ge=0)
+
+
 class Fact(StrictModel):
     name: str
     value: str
     source_id: str
     source_quote: str = Field(min_length=1)
+    source_span: SourceSpan | None = None
 
 
 class CaseProfile(StrictModel):

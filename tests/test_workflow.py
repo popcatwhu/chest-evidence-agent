@@ -1,13 +1,23 @@
 import pytest
+from chest_agent.independent_review import BlindOpinion, IndexedReview
 from chest_agent import store, workflow, config
-from chest_agent.schemas import Plan, Report, Review, CaseProfile, Observation
-from chest_agent.clinical_contrast import ClinicalContrast
+from chest_agent.schemas import Plan, Report, Review, Observation
+from chest_agent.independent_review import SelectedCaseProfile as CaseProfile
+from chest_agent.clinical_contrast import IndexedClinicalContrast as ClinicalContrast
 
 
 @pytest.fixture(autouse=True)
 def no_external_models_in_workflow_unit_tests(monkeypatch):
     monkeypatch.setattr(config, "CXR_EXPERT_ENABLED", False)
-    for agent in (workflow.agents.radiologist, workflow.agents.reviewer):
+
+    def reviewer(prompt, schema, image=None, **kw):
+        if schema is BlindOpinion:
+            return BlindOpinion(candidates=[make_report("C-1").most_likely])
+        result = workflow.backend.json(prompt, Review, image, **kw)
+        return IndexedReview(issues=[]) if result.issues == [] else result
+
+    monkeypatch.setattr(workflow.agents.reviewer, "run", reviewer)
+    for agent in (workflow.agents.radiologist,):
         monkeypatch.setattr(
             agent,
             "run",
