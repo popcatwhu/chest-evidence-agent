@@ -30,6 +30,20 @@ python scripts/run_expanded_evaluation.py --manifest data/team60/test60/manifest
 
 `direct` 和 `tools` 仅供消融实验，工作台使用 `verified` 完整流程。不同任务、样本和输入协议的分数不合并。
 
+## 诊断纠错开发集
+
+另从 [MedXpertQA](https://huggingface.co/datasets/TsinghuaC3I/MedXpertQA) 的固定版本筛选胸片诊断题，先按图片模态检查，再按固定种子划分12题开发集和24题保留测试集。输入不含答案或解释。图片像素不重叠，但源数据不提供可验证的患者标识，不能声称患者完全独立；公开题目也可能存在预训练污染。
+
+[图片审核](../evals/medxpert-intake.json)与[划分记录](../evals/medxpert-splits.json)公开编号和指纹，原图及带答案的清单位于本地 `data/medxpert/`。固定源文件为 `MM/test.jsonl` 和 `images.zip`，版本见划分记录；这些是原数据测试题的本地开发/保留划分，不沿用原数据的dev/test命名。
+
+```bash
+python -m scripts.prepare_medxpert
+python -m scripts.add_differential_sources
+python -m scripts.evaluate_corrections
+```
+
+评测比较同一次完整流程中临床草稿与最终报告，分别记录错误草稿纠正率、正确草稿误改率和最终选项准确率。缺失草稿单独统计，不当作有效诊断错误；最终失败计入错误。它衡量后续审查与裁决的增量，不等同于与单模型独立调用的完整消融。保留集默认禁止运行，固定流程后才使用 `--evaluate-holdout`；其成绩不会与60例ChestAgentBench成绩合并。
+
 ## 首批20例记录
 
 20例报告均完成，选择题结论答对15例。所有专业 Agent 完整参与的为19例；1例影像 Agent 的结构化输出未完成，保留为失败观察，没有重新提交病例替换结果。报告耗时中位数63.94秒，GPU峰值保留显存28.14 GiB。

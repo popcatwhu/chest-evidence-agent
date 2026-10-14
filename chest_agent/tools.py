@@ -168,7 +168,7 @@ class ImageTools:
 image_tools = ImageTools()
 
 
-def retrieve(query, limit=6):
+def retrieve(query, limit=6, max_per_source=2):
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
 
@@ -213,7 +213,7 @@ def retrieve(query, limit=6):
         url = documents[i]["url"]
         if (
             scores[i] <= max(0.025, float(scores.max()) * 0.3)
-            or counts.get(url, 0) >= 2
+            or counts.get(url, 0) >= max_per_source
         ):
             continue
         indices.append(i)

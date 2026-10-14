@@ -286,6 +286,17 @@ class ModelBackend:
     def json(self, prompt, schema, image_path=None, max_tokens=1800):
         is_report = schema.__name__ in {"Report", "ChoiceReport"}
         templates = {
+            "DisputePlan": {
+                "disputed_point": "具体分歧",
+                "queries": ["English differential diagnosis query"],
+                "decision_criteria": ["改变结论所需的患者依据"],
+            },
+            "Adjudication": {
+                "decision": "unresolved",
+                "preferred_choice": None,
+                "reason": "患者证据如何支持或反驳两个候选，缺少哪些决定性依据",
+                "evidence_ids": ["C-1"],
+            },
             "SelectedCaseProfile": {
                 "facts": [{"name": "检查或病史项目", "source_id": "C-1-S1-1"}]
             },

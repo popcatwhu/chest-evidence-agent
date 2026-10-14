@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from concurrent.futures import ThreadPoolExecutor
 from uuid import uuid4
-from pathlib import Path
+from .fingerprint import source_fingerprint
 from fastapi import FastAPI, Form, File, UploadFile, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -28,6 +28,9 @@ app.mount(
 app.mount("/static", StaticFiles(directory=config.ROOT / "static"), name="static")
 
 
+PIPELINE_SOURCE_SHA256 = source_fingerprint()
+
+
 @app.get("/")
 def index():
     return FileResponse(config.ROOT / "static/index.html")
@@ -37,6 +40,7 @@ def index():
 def health():
     return {
         "backend": config.BACKEND,
+        "pipeline_source_sha256": PIPELINE_SOURCE_SHA256,
         "model_name": config.MODEL.name,
         "model_ready": backend.ready() and not config.INFERENCE_PAUSED,
         "cxr_reader": config.RADIOLOGY_MODEL.name,

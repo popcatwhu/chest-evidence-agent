@@ -30,6 +30,14 @@ from .independent_review import (
 from .recommendations import check_recommendations
 from .clinical_consistency import clinical_inconsistencies
 from .diagnosis_checks import diagnosis_issues
+from .disputes import (
+    DisputePlan,
+    Adjudication,
+    disagrees,
+    dispute_context,
+    adjudication_errors,
+    repair_dispute_context,
+)
 from .clinical_contrast import (
     ClinicalContrast,
     IndexedClinicalContrast,
@@ -62,6 +70,9 @@ class State(TypedDict, total=False):
     agent_messages: list[dict]
     collaboration_notes: list[str]
     blind_opinion: BlindOpinion | None
+    dispute_plan: dict | None
+    adjudication: dict | None
+    dispute_retrieval: dict
 
 
 def log(state, stage, message):
@@ -485,6 +496,145 @@ def consult(state):
     }
 
 
+def investigate_dispute(state):
+    if state["mode"] != "verified" or not disagrees(state):
+        return {
+            "dispute_plan": None,
+            "adjudication": None,
+            "dispute_retrieval": {"triggered": False, "new_evidence_ids": []},
+        }
+    log(state, "dispute_search", "围绕独立判断与临床草稿的分歧，检索鉴别依据")
+    messages = list(state.get("agent_messages", []))
+    notes = list(state.get("collaboration_notes", []))
+    evidence = list(state["evidence"])
+    try:
+        plan = agents.coordinator.run(
+            "为两个不同诊断意见制定证据检索计划。指出真正争议是病因、影像特征、分期还是选项。"
+            "最多两个英文查询，每个不超过40词，包含两个候选和关键鉴别点。"
+            "decision_criteria说明找到什么依据才有理由改变草稿。不得把模型意见或选项当成患者事实。\n"
+            + dispute_context(state),
+            DisputePlan,
+            max_tokens=500,
+        )
+        prior = {(e.source, e.content) for e in evidence if e.kind == "knowledge"}
+        number = max(
+            [
+                int(e.id[2:])
+                for e in evidence
+                if e.id.startswith("K-") and e.id[2:].isdigit()
+            ],
+            default=0,
+        )
+        added = []
+        for query in plan.queries:
+            for item in retrieve(query, limit=2, max_per_source=1):
+                key = (item.source, item.content)
+                if key in prior:
+                    continue
+                prior.add(key)
+                number += 1
+                item = item.model_copy(
+                    update={"id": f"K-{number}", "content": item.content[:700]}
+                )
+                evidence.append(item)
+                added.append(item.id)
+                if len(added) == 2:
+                    break
+            if len(added) == 2:
+                break
+        messages.append(
+            agents.message(
+                agents.coordinator,
+                "completed",
+                {
+                    "action": "dispute_search",
+                    **plan.model_dump(),
+                    "new_evidence_ids": added,
+                },
+            )
+        )
+        if not added:
+            notes.append("分歧检索没有找到新的可引用资料，不能据此证明任一候选正确")
+        return {
+            "evidence": evidence,
+            "dispute_plan": plan.model_dump(),
+            "dispute_retrieval": {
+                "triggered": True,
+                "queries": plan.queries,
+                "new_evidence_ids": added,
+            },
+            "agent_messages": messages,
+            "collaboration_notes": notes,
+        }
+    except Exception as error:
+        notes.append("分歧检索未完成")
+        messages.append(agents.message(agents.coordinator, "failed", error=str(error)))
+        return {
+            "dispute_plan": None,
+            "adjudication": None,
+            "dispute_retrieval": {"triggered": True, "new_evidence_ids": []},
+            "agent_messages": messages,
+            "collaboration_notes": notes,
+        }
+
+
+def adjudicate_dispute(state):
+    if not state.get("dispute_plan"):
+        return {}
+    log(
+        state,
+        "adjudicate",
+        "协调 Agent 对照患者证据和检索资料，决定保留、修订或保留分歧",
+    )
+    messages = list(state.get("agent_messages", []))
+    notes = list(state.get("collaboration_notes", []))
+    try:
+        decision = agents.coordinator.run(
+            "依据原始病例、原图和资料处理诊断分歧。decision为keep（保留草稿）、revise（提出证据支持的修订）"
+            "或unresolved（无法裁决）。不要投票；另一模型的意见不是新证据；资料描述的疾病标准不是患者已满足这些标准。"
+            "reason说明决定性患者依据、对另一候选的反证和未解决限制；evidence_ids必须包含患者依据。"
+            "选择题preferred_choice填实际选项；revise必须提出不同于草稿的选项。没有充分患者依据时选unresolved。\n"
+            + dispute_context(state)
+            + "\n检索判据："
+            + json.dumps(state["dispute_plan"], ensure_ascii=False)
+            + "\n原始证据："
+            + reasoning_context(state),
+            Adjudication,
+            reasoning_image(state),
+            max_tokens=700,
+        )
+        errors = adjudication_errors(
+            decision, state, allow_original=bool(reasoning_image(state))
+        )
+        if errors:
+            notes.extend(errors)
+            result = None
+        else:
+            result = decision.model_dump()
+            if decision.decision == "unresolved":
+                notes.append("诊断分歧未解决：" + decision.reason)
+        messages.append(
+            agents.message(
+                agents.coordinator,
+                "completed",
+                {"action": "adjudicate", "decision": result, "rejected": errors},
+            )
+        )
+        return {
+            "adjudication": result,
+            "agent_messages": messages,
+            "collaboration_notes": notes,
+        }
+    except Exception as error:
+        notes.append("诊断分歧裁决未完成")
+        messages.append(agents.message(agents.coordinator, "failed", error=str(error)))
+        return {
+            "adjudication": None,
+            "agent_messages": messages,
+            "collaboration_notes": notes,
+        }
+
+
 def verify(state):
     if state["mode"] != "verified":
         return {"issues": []}
@@ -500,6 +650,9 @@ def verify(state):
         + clinical_inconsistencies(state["report"], state["evidence"])
         + diagnosis_issues(state["report"])
     )
+    decision = state.get("adjudication")
+    if decision and decision["decision"] == "revise" and state["repairs"] == 0:
+        issues.append("分歧裁决建议基于患者证据修订草稿：" + decision["reason"])
     sources, targets = source_index(state["evidence"]), report_index(state["report"])
     opinion = state.get("blind_opinion")
     disagreement = bool(
@@ -521,7 +674,13 @@ def verify(state):
         "这是模型复核，不是临床验证。\n任务问题和选项（不是患者事实）："
         + state.get("question", "")
         + "\n来源片段："
-        + json.dumps(sources, ensure_ascii=False)
+        + json.dumps(
+            [
+                {k: row[k] for k in ("id", "text", "kind", "source_type")}
+                for row in sources
+            ],
+            ensure_ascii=False,
+        )
         + "\n报告字段："
         + json.dumps(targets, ensure_ascii=False)
         + "\n独立判断："
@@ -551,6 +710,14 @@ def verify(state):
     resolved, spans, notes = resolve_review(review, targets, sources)
     accepted, rejected = anchor_review(resolved, state["report"], state["evidence"])
     notes.extend(rejected)
+    if (
+        decision
+        and decision["decision"] == "revise"
+        and state["repairs"] > 0
+        and decision.get("preferred_choice")
+        and decision["preferred_choice"] != state["report"].answer_choice
+    ):
+        notes.append("最终报告未采用分歧裁决建议的选项，仍需对照患者依据复核")
     if disagreement and not accepted:
         notes.append(
             f"独立判断选项{opinion.answer_choice}与报告{state['report'].answer_choice}不同，尚无充分原文依据判定哪方错误"
@@ -597,7 +764,8 @@ def repair(state):
             state["blind_opinion"].model_dump_json()
             if state.get("blind_opinion")
             else "未完成"
-        ),
+        )
+        + repair_dispute_context(state),
         report_schema(state["question"]),
         reasoning_image(state),
         max_tokens=1800,
@@ -632,6 +800,8 @@ def build_graph():
         ("contrast", contrast),
         ("diagnose", diagnose),
         ("consult", consult),
+        ("investigate_dispute", investigate_dispute),
+        ("adjudicate_dispute", adjudicate_dispute),
         ("verify", verify),
         ("repair", repair),
         ("update", update_report),
@@ -649,6 +819,8 @@ def build_graph():
             "contrast",
             "diagnose",
             "consult",
+            "investigate_dispute",
+            "adjudicate_dispute",
         ],
         [
             "profile",
@@ -659,6 +831,8 @@ def build_graph():
             "contrast",
             "diagnose",
             "consult",
+            "investigate_dispute",
+            "adjudicate_dispute",
             "verify",
         ],
     ):
@@ -762,6 +936,8 @@ def execute(run_id):
                     "independent_review": run["mode"] == "verified",
                     "blind_consultation": run["mode"] == "verified",
                     "quote_selection": "source character spans",
+                    "dispute_retrieval": state.get("dispute_retrieval", {}),
+                    "adjudication": state.get("adjudication"),
                 },
                 "cxr_expert_enabled": config.CXR_EXPERT_ENABLED,
                 "clinical_contrast": state["clinical_contrast"].model_dump()

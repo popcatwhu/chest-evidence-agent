@@ -33,6 +33,8 @@ const stageNames = {
   clinical_agent: '临床 Agent',
   review_agent: '独立审查 Agent',
   independent_consult: '独立判断',
+  dispute_search: '分歧检索',
+  adjudicate: '分歧裁决',
   coordinator_agent: '协调 Agent',
   radiology: '专用影像工具',
   plan: '分析计划',
@@ -379,6 +381,8 @@ function collaborationPanel(team) {
     if (o.most_likely) summary += `<p>候选：${esc(o.most_likely.name)}</p>`;
     if (o.phase === 'blind') summary += `<p>读取其他模型报告前的判断${o.answer_choice ? ' · 选项 ' + esc(o.answer_choice) : ''}</p>${list((o.candidates || []).map(x => x.name))}${list(o.limitations || [])}`;
     if (o.choice_disagreement) summary += '<p>独立判断与报告的选项不同，需结合原始证据核对。</p>';
+    if (o.action === 'dispute_search') summary += `<p>争议：${esc(o.disputed_point)}</p>${list(o.queries)}${list(o.decision_criteria)}<p>新增来源：${esc((o.new_evidence_ids || []).join('、') || '未找到新资料')}</p>`;
+    if (o.action === 'adjudicate') summary += o.decision ? `<p>裁决：${esc({keep:'保留草稿',revise:'建议修订',unresolved:'分歧未解决'}[o.decision.decision])}${o.decision.preferred_choice ? ' · 选项 ' + esc(o.decision.preferred_choice) : ''}</p><p>${esc(o.decision.reason)}</p>` : list(o.rejected || []);
     if (o.accepted_challenges) summary += o.accepted_challenges.length ? list(o.accepted_challenges.map(x => `${x.report_quote}：${x.reason}`)) : '<p>本轮未保留有原文依据的质疑。</p>';
     if (o.unanchored_challenges?.length) summary += list(o.unanchored_challenges);
     if (o.challenges) summary += list(o.challenges);
